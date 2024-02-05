@@ -107,4 +107,4 @@ class RefundRate:
         return result
     
     def saveInvestmentHistoryDayByDay(self, destinationFilePath):
-        
+        pass
