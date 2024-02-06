@@ -56,15 +56,17 @@
     
     
 .INPUTS
-        --Latest_Fund_Data_Only <- displays only todays funds' stats
-        
+        --Latest_Fund_Data_Only <- displays todays funds' stats
+        --Print_Investment_Refund_Calculation <- prints investment refund for today
+        --Quotations_Output_Format {CSV,JSON} <- accepts only CSV or JSON as an input.
+            According to provided format Historical quotations will be saved.
 
 .OUTPUTS
     None
 
 .NOTES
 
-    Version:            1.0
+    Version:            1.1
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -72,7 +74,8 @@
     ChangeLog:
 
     Date            Who                     What
-    
+    2024-02-06      Stanislaw Horna         Command-line arguments modified.
+                                            saveInvestmentHistoryDayByDay method added
 """
 
 import argparse
@@ -90,15 +93,15 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     "-l",
-    "--Latest_Fund_Data_Only",
+    "--Print_Latest_Fund_Data_Only",
     action="store_true",
-    help="Download only current fund's details",
+    help="Prints current fund's details",
 )
 parser.add_argument(
     "-i",
-    "--Investment_Refund_Calculation",
+    "--Print_Investment_Refund_Calculation",
     action="store_true",
-    help="Calculate investments refund",
+    help="Prints result of investments refund",
 )
 parser.add_argument(
     "--Quotations_Output_Format", 
@@ -108,26 +111,28 @@ parser.add_argument(
 
 
 def main(options):
+    
     config = getConfiguration(options)
     
     Funds = ListOfFunds(config[FundsToCheckURLsKey])
     Funds.downloadLatestDetails()
     Funds.saveTodaysResults()
-    
-    latestFundDataOnly(Funds, options)
-    
     Funds.downloadHistoricalQuotation()
     
+    latestFundDataOnly(Funds, options)
     historicalQuotations(Funds, options)
     
-    investmentRefundCalculation(config[InvestmentsFilePathKey], Funds, options)
+    investments = InvestmentWallet(config[InvestmentsFilePathKey], Funds)
+    investments.calculateRefundDetails()
+    investments.saveInvestmentHistoryDayByDay()
     
+    
+    investmentRefundCalculation(investments, options)
     exit(0)
 
 def latestFundDataOnly(Funds, options):
-    if options.Latest_Fund_Data_Only:
+    if options.Print_Latest_Fund_Data_Only:
         Funds.printFundInfo()
-        exit(0)
 
 def historicalQuotations(Funds, options):
     if options.Quotations_Output_Format == "JSON":
@@ -137,12 +142,9 @@ def historicalQuotations(Funds, options):
         Funds.saveQuotationCSV()
         
 
-def investmentRefundCalculation(InvestmentsFilePath, Funds, options):
-    if options.Investment_Refund_Calculation:
-        investments = InvestmentWallet(InvestmentsFilePath, Funds)
-        investments.calculateRefundDetails()
+def investmentRefundCalculation(investments, options):
+    if options.Print_Investment_Refund_Calculation:
         investments.printInvestmentResults()
-        exit(0)
 
 
 main(parser.parse_args())
