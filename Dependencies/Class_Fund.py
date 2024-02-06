@@ -1,6 +1,7 @@
 import requests
 import json
 import csv
+from dataclasses import dataclass, field
 from lxml.html import fromstring
 from datetime import datetime
 
@@ -43,7 +44,7 @@ class ListOfFunds:
 
         self.ListOfFunds = {}
         for item in ListOfFundURL:
-            temp = AnalizyFund(item)
+            temp = AnalizyFund(URL=item)
             self.ListOfFunds[temp.getFundID()] = temp
 
     def downloadLatestDetails(self):
@@ -84,51 +85,36 @@ class ListOfFunds:
             raise Exception("ID must be a string")
         return self.ListOfFunds[ID]
 
-
+@dataclass
 class AnalizyFund:
     QuotationsAPI = analizyplQuotationAPI
 
-    def __init__(self, FundURL):
-        if not isinstance(FundURL, str):
-            raise TypeError("FundURL must be a string")
-        urlBreakdown = FundURL.split("/")
-        self.URL = FundURL
+    URL: str 
+    ID: str = field(init=False)
+    Name: str = field(init=False)
+    Category: str = field(init=False)
+    CategoryShortCut: str = field(init=False)
+    
+    def __post_init__(self):
+        urlBreakdown = self.URL.split("/")
         self.Category = urlBreakdown[3]
         self.ID = urlBreakdown[4]
         self.Name = urlBreakdown[5].replace("-", " ").title()
         self.CategoryShortCut = "".join([word[0] for word in self.Category.split("-")])
+        
+        self.downloadLatestDetails()
+        self.downloadHistoricalQuotation()
 
-    def getFundName(self):
-        return self.Name
-
-    def getFundID(self):
+    def getFundID(self) -> str:
         return self.ID
 
-    def getFundURL(self):
-        return self.URL
-
-    def getCategoryName(self):
-        return self.Category
-
-    def getCategoryShortCut(self):
-        return self.CategoryShortCut
-
-    def getPrice(self):
+    def getPrice(self) -> float:
         return float(self.Price)
 
-    def getCurrency(self):
+    def getCurrency(self) -> str:
         return self.Currency
 
-    def getChangePercentage1D(self):
-        return self.ChangePercentage1D
-
-    def getChangeValue1D(self):
-        return self.ChangeValue1D
-
-    def getQuotation(self):        
-        return self.QuotationJSON["Price"]
-
-    def getFundPriceOnDate(self, date):
+    def getFundPriceOnDate(self, date) -> float:
         return float(
             [item for item in self.QuotationJSON["Price"] 
             if item[analizyplAPIresponse_QuotationDate] == date][0]["value"]
@@ -208,7 +194,7 @@ class AnalizyFund:
                     ]
                     )
 
-    def ExportTodaysResults(self):
+    def ExportTodaysResults(self) -> dict:
         return {
             "FundName": self.Name,
             "FundID": self.ID,

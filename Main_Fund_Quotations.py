@@ -66,7 +66,7 @@
 
 .NOTES
 
-    Version:            1.1
+    Version:            1.2
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -75,7 +75,9 @@
 
     Date            Who                     What
     2024-02-06      Stanislaw Horna         Command-line arguments modified.
-                                            saveInvestmentHistoryDayByDay method added
+                                            saveInvestmentHistoryDayByDay method added.
+                                            Functions naming convention corrected.
+                                            Downloading latest stats and historical quotation moved to __post_init__
 """
 
 import argparse
@@ -115,26 +117,23 @@ def main(options):
     config = getConfiguration(options)
     
     Funds = ListOfFunds(config[FundsToCheckURLsKey])
-    Funds.downloadLatestDetails()
     Funds.saveTodaysResults()
-    Funds.downloadHistoricalQuotation()
     
-    latestFundDataOnly(Funds, options)
-    historicalQuotations(Funds, options)
+    printLatestFundData(Funds, options)
+    saveHistoricalQuotations(Funds, options)
     
     investments = InvestmentWallet(config[InvestmentsFilePathKey], Funds)
     investments.calculateRefundDetails()
     investments.saveInvestmentHistoryDayByDay()
     
-    
-    investmentRefundCalculation(investments, options)
+    printInvestmentRefundCalculation(investments, options)
     exit(0)
 
-def latestFundDataOnly(Funds, options):
+def printLatestFundData(Funds, options):
     if options.Print_Latest_Fund_Data_Only:
         Funds.printFundInfo()
 
-def historicalQuotations(Funds, options):
+def saveHistoricalQuotations(Funds, options):
     if options.Quotations_Output_Format == "JSON":
         Funds.saveQuotationJSON()
     
@@ -142,7 +141,7 @@ def historicalQuotations(Funds, options):
         Funds.saveQuotationCSV()
         
 
-def investmentRefundCalculation(investments, options):
+def printInvestmentRefundCalculation(investments, options):
     if options.Print_Investment_Refund_Calculation:
         investments.printInvestmentResults()
 
