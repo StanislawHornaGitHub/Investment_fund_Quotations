@@ -1,5 +1,7 @@
 {
-    "HistoricalQuotationDirectoryName": "Output",
+    "HistoricalQuotationDirectoryName": "Output_Quotations",
+    "DailyReportDirectoryName": "Output_DailyChanges",
+    "InvestmentHistoryDayByDayDirectory": "Output_InvestmentsDayByDay",
     "InvestmentsFilePath":"Investments.json",
     "FundsToCheckURLs": [
         "https://www.analizy.pl/fundusze-inwestycyjne-otwarte/ING07/goldman-sachs-stabilnego-wzrostu",

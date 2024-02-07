@@ -9,7 +9,9 @@
     
     CONFIG.json structure:
     {
-        "HistoricalQuotationDirectoryName": "Output",
+        "HistoricalQuotationDirectoryName": "Output_Quotations",
+        "DailyReportDirectoryName": "Output_DailyChanges",
+        "InvestmentHistoryDayByDayDirectory": "Output_InvestmentsDayByDay",
         "InvestmentsFilePath":"Investments.json",
         "FundsToCheckURLs": [
             "<URL_To_Fund_1>",
@@ -18,11 +20,19 @@
             "<URL_To_Fund_4>"
         ]
     }
+    
     HistoricalQuotationDirectoryName <- path to the folder where historical quotations will be saved
         It can be relative or absolute path
+    
+    DailyReportDirectoryName <- path to the folder where todays fund's stats will be saved
+    
+    InvestmentHistoryDayByDayDirectory <- path to the folder where DayByDay investments results will be saved
+    
     InvestmentsFilePath <- file path to the JSON with investments definition. 
         It can be relative or absolute path
+    
     FundsToCheckURLs <- list of URL to funds which will be checked
+    
     
     Investments.json structure:
     {
@@ -50,7 +60,7 @@
     Each fund selected in Investments.json must be included in CONFIG.json in section FundsToCheckURLs
     <Name_of_investment_wallet> <- User friendly name of funds set 
     <Fund_ID_X> <- Fund ID allocated under particular fund set,
-        it can be read out from fund URL or run program with -l (--Latest_Fund_Data_Only) param
+        it can be read out from fund URL or run program with -l (--Print_Latest_Fund_Data) param
     <Date_when_fund_was_bought> <- Date when fund was bought
     <Amount_allocated_for_the_purchase> <- amount of money used to buy particular fund
     
@@ -78,24 +88,25 @@
                                             saveInvestmentHistoryDayByDay method added.
                                             Functions naming convention corrected.
                                             Downloading latest stats and historical quotation moved to __post_init__
+    2024-02-07      Stanislaw Horna         Refactored class code. 
+                                            Improved Investment stats.
+                                            Displaying console results in tables
 """
 
 import argparse
-from Dependencies.Class_Fund import ListOfFunds
+from Dependencies.Class_ListOfFund import ListOfFunds
 from Dependencies.Class_InvestmentWallet import InvestmentWallet
 from Dependencies.Function_config import *
 
-programSynopsis = '''
+programSynopsis = """
 Program to download funds quotations and calculate profits of investments.
 Without params program is creating report about todays funds' stats in JSON
-'''
+"""
 
-parser = argparse.ArgumentParser(
-    description = programSynopsis
-)
+parser = argparse.ArgumentParser(description=programSynopsis)
 parser.add_argument(
     "-l",
-    "--Print_Latest_Fund_Data_Only",
+    "--Print_Latest_Fund_Data",
     action="store_true",
     help="Prints current fund's details",
 )
@@ -106,40 +117,47 @@ parser.add_argument(
     help="Prints result of investments refund",
 )
 parser.add_argument(
-    "--Quotations_Output_Format", 
-    choices=["CSV", "JSON"], 
-    help="Define file type in which historical fund quotations will be saved."
+    "--Quotations_Output_Format",
+    choices=["CSV", "JSON"],
+    help="Define file type in which historical fund quotations will be saved.",
 )
 
 
 def main(options):
-    
+
     config = getConfiguration(options)
-    
+
     Funds = ListOfFunds(config[FundsToCheckURLsKey])
-    Funds.saveTodaysResults()
-    
+    Funds.saveTodaysResults(config[DailyReportDirectoryName])
+
     printLatestFundData(Funds, options)
     saveHistoricalQuotations(Funds, options)
-    
-    investments = InvestmentWallet(config[InvestmentsFilePathKey], Funds)
-    investments.calculateRefundDetails()
-    investments.saveInvestmentHistoryDayByDay()
-    
-    printInvestmentRefundCalculation(investments, options)
+    if os.path.isfile(config[InvestmentsFilePathKey]):
+        investments = InvestmentWallet(
+            InvestmentsFilePath=config[InvestmentsFilePathKey], FundsList=Funds
+        )
+
+        investments.saveInvestmentHistoryDayByDay(
+            config[InvestmentHistoryDayByDayDirectory]
+        )
+
+        printInvestmentRefundCalculation(investments, options)
+
     exit(0)
 
+
 def printLatestFundData(Funds, options):
-    if options.Print_Latest_Fund_Data_Only:
+    if options.Print_Latest_Fund_Data:
         Funds.printFundInfo()
+
 
 def saveHistoricalQuotations(Funds, options):
     if options.Quotations_Output_Format == "JSON":
         Funds.saveQuotationJSON()
-    
+
     if options.Quotations_Output_Format == "CSV":
         Funds.saveQuotationCSV()
-        
+
 
 def printInvestmentRefundCalculation(investments, options):
     if options.Print_Investment_Refund_Calculation:

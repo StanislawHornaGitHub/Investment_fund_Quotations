@@ -3,6 +3,8 @@
         "Analizy",
         "analizypl",
         "dateutil",
-        "lxml"
+        "lxml",
+        "Stanislaw",
+        "tablefmt"
     ]
 }
