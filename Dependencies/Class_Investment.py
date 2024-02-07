@@ -157,6 +157,7 @@ class Investment:
         profit = self.getProfit()
         refund = self.getRefundRate()
         timeFrame = self.getInvestmentDurationDays()
+        blankSpaceString = "-"
         
         # Append result list with stats of complete investment
         resultList.append(
@@ -167,11 +168,11 @@ class Investment:
                 "Days": timeFrame,
                 "Profit per day": (profit / timeFrame),
                 "Refund per day": (refund / timeFrame),
-                "Fund ID": "-",
-                "Investment %": "-",
-                "Fund profit": "-",
-                "Fund refund %": "-",
-                "Last Change %": "-"
+                "Fund ID": blankSpaceString,
+                "Investment %": blankSpaceString,
+                "Fund profit": blankSpaceString,
+                "Fund refund %": blankSpaceString,
+                "Last Change %": blankSpaceString
             }
         )
         
@@ -184,12 +185,12 @@ class Investment:
             # Append result list with details about each bought fund
             resultList.append(
                 {
-                    "Investment Name": "-",
-                    "Profit": "-",
-                    "Refund Rate": "-",
-                    "Days": "-",
-                    "Profit per day": "-",
-                    "Refund per day": "-",
+                    "Investment Name": blankSpaceString,
+                    "Profit": blankSpaceString,
+                    "Refund Rate": blankSpaceString,
+                    "Days": blankSpaceString,
+                    "Profit per day": blankSpaceString,
+                    "Refund per day": blankSpaceString,
                     "Fund ID": fund,
                     "Investment %": percentageOfInvestment,
                     "Fund profit": fundProfit,
