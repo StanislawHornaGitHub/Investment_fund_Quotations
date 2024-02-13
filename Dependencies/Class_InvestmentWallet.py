@@ -129,7 +129,7 @@ class InvestmentWallet:
                     convertNumericToStrPlsMnsSigns(
                         inputValues=list(self.WalletsResults[item][i].values()),
                         headers=dataHeaders,
-                        columnsExcludedFromSigns=["Days"],
+                        columnsExcludedFromSigns=["Days", "Investment %"],
                         currencyColumnNames=["Profit", "Profit per day", "Fund profit"],
                         currency=self.Wallets[item].Currency,
                         percentageColumnNames=[
