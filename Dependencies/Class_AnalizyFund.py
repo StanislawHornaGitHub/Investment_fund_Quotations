@@ -147,10 +147,10 @@ class AnalizyFund:
 
         # Check if destination Path was provided and create appropriate `destinationFilePath`
         if destinationPath == None:
-            destinationFilePath = f"FQ_{self.CategoryShortCut}_{self.ID}.csv"
+            destinationFilePath = f"FQ_{self.CategoryShortCut}_{self.ID}.json"
         else:
             destinationFilePath = (
-                f"{destinationPath}/FQ_{self.CategoryShortCut}_{self.ID}.csv"
+                f"{destinationPath}/FQ_{self.CategoryShortCut}_{self.ID}.json"
             )
 
         # Open destination file and write dict dumped to JSON structure

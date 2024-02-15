@@ -124,6 +124,8 @@ parser.add_argument(
 
 
 def main(options):
+    
+    setCorrectPath()
 
     config = getConfiguration(options)
 
@@ -131,7 +133,8 @@ def main(options):
     Funds.saveTodaysResults(config[DailyReportDirectoryName])
 
     printLatestFundData(Funds, options)
-    saveHistoricalQuotations(Funds, options)
+    saveHistoricalQuotations(
+        Funds, config["HistoricalQuotationDirectoryName"], options)
     if os.path.isfile(config[InvestmentsFilePathKey]):
         investments = InvestmentWallet(
             InvestmentsFilePath=config[InvestmentsFilePathKey], FundsList=Funds
@@ -146,17 +149,23 @@ def main(options):
     exit(0)
 
 
+def setCorrectPath():
+    file_path = os.path.realpath(__file__)
+    file_path = "/".join(file_path.split("/")[:-1])
+    os.chdir(file_path)
+
+
 def printLatestFundData(Funds, options):
     if options.Print_Latest_Fund_Data:
         Funds.printFundInfo()
 
 
-def saveHistoricalQuotations(Funds, options):
+def saveHistoricalQuotations(Funds: ListOfFunds, destinationDir: str, options):
     if options.Quotations_Output_Format == "JSON":
-        Funds.saveQuotationJSON()
+        Funds.saveQuotationJSON(destinationDir)
 
     if options.Quotations_Output_Format == "CSV":
-        Funds.saveQuotationCSV()
+        Funds.saveQuotationCSV(destinationDir)
 
 
 def printInvestmentRefundCalculation(investments, options):
