@@ -52,8 +52,9 @@
     ChangeLog:
 
     Date            Who                     What
-    2024-02-16      Stanislaw Horna         Functionality to handle multiple orders of the same Fund added
-                                            InvestmentDetails structure has changed
+    2024-02-16      Stanislaw Horna         Functionality to handle multiple orders of the same Fund added.
+                                            InvestmentDetails structure has changed.
+                                            Bugfix - Doubled data in InvestmentDayByDay CSV
 
 """
 # Official and 3-rd party imports
@@ -359,7 +360,6 @@ class Investment:
             currentProcessingDate += datetime.timedelta(days=1)
 
     def saveInvestmentHistoryDayByDay(self, investmentName, destinationPath=None):
-        self.calcInvestmentDayByDay()
         # Check if destination Path was provided and create appropriate `destinationFilePath`
         if destinationPath == None or not destinationPath:
             destinationFilePath = f"{investmentName}.csv"
