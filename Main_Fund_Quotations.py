@@ -124,7 +124,7 @@ parser.add_argument(
 
 
 def main(options):
-    
+
     setCorrectPath()
 
     config = getConfiguration(options)
@@ -134,10 +134,15 @@ def main(options):
 
     printLatestFundData(Funds, options)
     saveHistoricalQuotations(
-        Funds, config["HistoricalQuotationDirectoryName"], options)
+        Funds,
+        config["HistoricalQuotationDirectoryName"],
+        options
+    )
+
     if os.path.isfile(config[InvestmentsFilePathKey]):
         investments = InvestmentWallet(
-            InvestmentsFilePath=config[InvestmentsFilePathKey], FundsList=Funds
+            InvestmentsFilePath=config[InvestmentsFilePathKey],
+            FundsList=Funds
         )
 
         investments.saveInvestmentHistoryDayByDay(

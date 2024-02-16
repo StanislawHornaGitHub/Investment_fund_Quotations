@@ -10,27 +10,41 @@
     To have the class to function correctly you need to pass an instance of ListOfFunds
     to class constructor.
     
-.INITIALIZATION
     To create an instance of this class you need to use keywords.
     By default class was meant to be a attribute of InvestmentWallet class
     Keywords for required variables:
         -InvestmentDetails <- dict structure in following format:
-                {
-                    <Fund_ID_1> : {
-                        "BuyDate": "<yyyy-MM-dd>",
-                        "Money": "<int_or_float>"
-                    },
-                    <Fund_ID_2> : {
-                        "BuyDate": "<yyyy-MM-dd>",
-                        "Money": "<int_or_float>"
-                    }
+            {
+                "StartDate": "2024-01-25",
+                "Funds": {
+                    "Fund_ID_1": [
+                        {
+                            "BuyDate": "<yyyy-MM-dd>",
+                            "Money": <int_or_float>
+                        },
+                        {
+                            "BuyDate": "<yyyy-MM-dd>",
+                            "Money": <int_or_float>
+                        }
+                    ],
+                    "<Fund_ID_2>": [
+                        {
+                            "BuyDate": "<yyyy-MM-dd>",
+                            "Money": <int_or_float>
+                        },
+                        {
+                            "BuyDate": "<yyyy-MM-dd>",
+                            "Money": <int_or_float>
+                        }
+                    ]
                 }
+            }
         
         - FundsList <- an instance of ListOfFunds with already downloaded data from web
 
 .NOTES
 
-    Version:            1.0
+    Version:            1.1
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -38,6 +52,8 @@
     ChangeLog:
 
     Date            Who                     What
+    2024-02-16      Stanislaw Horna         Functionality to handle multiple orders of the same Fund added
+                                            InvestmentDetails structure has changed
 
 """
 # Official and 3-rd party imports
@@ -53,24 +69,53 @@ from Dependencies.Variable_InvestmentFile import *
 from Dependencies.Class_ListOfFund import ListOfFunds
 from Dependencies.Class_AnalizyFund import AnalizyFund
 
+
 @dataclass(kw_only=True)
 class Investment:
-    
+
     # Initialization Variables
     InvestmentDetails: dict[str, dict[str, float | str]]
     FundsList: ListOfFunds
-    
+
     # Calculated Variables
-    Currency: str = field(default_factory=str,init=False)
-    FundsQuotations: dict[str, AnalizyFund] = field(default_factory=dict, init=False)
-    Profit: float = field(default_factory=float, init=False)
-    InvestedMoney: float = field(default_factory=float, init=False)
-    TodaysValue: float = field(default_factory=float, init=False)
-    InvestmentDetailsDurationDays: int = field(init=False)
-    
+    Currency: str = field(
+        init=False,
+        default_factory=str
+    )
+    FundsQuotations: dict[str, AnalizyFund] = field(
+        default_factory=dict, init=False)
+    Profit: float = field(
+        init=False,
+        default_factory=float
+    )
+    InvestedMoney: float = field(
+        init=False,
+        default_factory=float
+    )
+    TodaysValue: float = field(
+        init=False,
+        default_factory=float
+    )
+    StartDate: datetime.datetime = field(
+        init=False
+    )
+    Results: dict[str, dict[str, float | str]] = field(
+        init=False,
+        default_factory=dict
+    )
+    DayByDay: list[dict[str, float | str]] = field(
+        init=False,
+        default_factory=list
+    )
+    InvestmentDetailsDurationDays: int = field(
+        init=False
+    )
+
     def __post_init__(self):
         currencySet = set()
-        
+
+        self.StartDate = parse(self.InvestmentDetails["StartDate"]).date()
+        self.InvestmentDetails = self.InvestmentDetails["Funds"]
         # Loop through selected funds, assign them to the class variable `FundsQuotations`, add fund currency to the set
         for fund in self.InvestmentDetails:
             self.FundsQuotations[fund] = self.FundsList.getFundByID(fund)
@@ -81,84 +126,57 @@ class Investment:
         # loop while currency set is not empty and add each currency
         while len(currencySet):
             self.Currency += " / " + currencySet.pop()
-        
+
+        self.calcInvestmentDayByDay()
         return None
 
     def calcRefundDetails(self):
-        # Init local variable for searching start date with all capital
-        startDate = datetime.datetime(1900,1,9)
         for fund in self.InvestmentDetails:
-            
-            # check if current fund's date is after recently assigned one, if yes assign the "younger" one
-            if startDate < parse(self.InvestmentDetails[fund][InvestmentFile_BuyDate]):
-                startDate = parse(self.InvestmentDetails[fund][InvestmentFile_BuyDate])
-            
-            # Calculate Fund's participation units
-            self.InvestmentDetails[fund]["ParticipationUnits"] = (
-                    # Money invested in current fund
-                float(self.InvestmentDetails[fund][InvestmentFile_Money]) 
-                    # Divide by
-                /   
-                    # Fund price on a buy date
-                (self.FundsQuotations[fund].getFundPriceOnDate(self.InvestmentDetails[fund][InvestmentFile_BuyDate]))
-                )
-            
-            # Calculate Today's value of bought participation units
-            self.InvestmentDetails[fund]["TodaysValue"] = (
-                    # Number of bought participation units
-                self.InvestmentDetails[fund]["ParticipationUnits"]
-                    # Multiplied by
-                * 
-                    # Today's Fund price
-                self.FundsQuotations[fund].getPrice()
-                )
-            
-            # Calculate Refund Rate based on whole investment period
-            self.InvestmentDetails[fund]["RefundRate"] =  (
-                (   # Divide Today's value of bought participation units
-                    (
-                            # Today's investment value
-                        self.InvestmentDetails[fund]["TodaysValue"]
-                            # Divide by 
-                        / 
-                            # Invested money at the beginning
-                        float(self.InvestmentDetails[fund][InvestmentFile_Money])
-                    )
-                # Subtract 1 from fraction to get only profit or loss
-                - 1)
-                # Multiply by 100 to present value as %
-                * 100)
-            
+            self.Results[fund] = {}
+            self.Results[fund]["ParticipationUnits"] = (
+                self.DayByDay[-1][f"{fund} P.U."]
+            )
+            self.Results[fund]["InvestedMoney"] = (
+                self.DayByDay[-1][f"{fund} Invested Money"]
+            )
+            self.Results[fund]["TodaysValue"] = (
+                self.DayByDay[-1][f"{fund} Value"]
+            )
+            self.Results[fund]["RefundRate"] = (
+                self.DayByDay[-1][f"{fund} Refund"] * 100
+            )
+
             # Add value of today's Fund value to calculate today's value of investment
-            self.TodaysValue += self.InvestmentDetails[fund]["TodaysValue"]
+            self.TodaysValue += self.Results[fund]["TodaysValue"]
             # Add value of invested money in current Fund to calculate amount of invested money
-            self.InvestedMoney += float(self.InvestmentDetails[fund][InvestmentFile_Money])
-        
+            self.InvestedMoney += self.Results[fund]["InvestedMoney"]
+
         # Calculate overall profit of investment
         self.Profit = (self.TodaysValue - self.InvestedMoney)
         # Calculate overall refund rate of investment
         self.refundRate = ((self.TodaysValue / self.InvestedMoney) - 1) * 100
-        # Calculate investment duration in days
-        self.InvestmentDetailsDurationDays = (datetime.datetime.now() - startDate).days
         return None
 
     def getProfit(self) -> float:
         return round(self.Profit, 2)
-    
+
     def getRefundRate(self) -> float:
         return round(self.refundRate, 4)
-    
+
     def getInvestmentDurationDays(self) -> int:
         return self.InvestmentDetailsDurationDays
-    
-    def getResult(self, name: str) -> list[dict]:
+
+    def getResult(self, name: str) -> list[dict[str, float | str]]:
+
+        self.calcRefundDetails()
+
         # Init local temp variables
         resultList = []
         profit = self.getProfit()
         refund = self.getRefundRate()
         timeFrame = self.getInvestmentDurationDays()
         blankSpaceString = "-"
-        
+
         # Append result list with stats of complete investment
         resultList.append(
             {
@@ -175,13 +193,15 @@ class Investment:
                 "Last Change %": blankSpaceString
             }
         )
-        
+
         # Loop through funds bought in investment
         for fund in self.InvestmentDetails:
             # Divide Today's fund value by invested money and multiply by 100 to receive %
-            percentageOfInvestment = ((self.InvestmentDetails[fund]["TodaysValue"] / self.InvestedMoney) * 100)
-            # Subtract money invested at the beginning from Today's value 
-            fundProfit = (self.InvestmentDetails[fund]["TodaysValue"] - float(self.InvestmentDetails[fund][InvestmentFile_Money]))
+            percentageOfInvestment = (
+                (self.Results[fund]["TodaysValue"] / self.InvestedMoney) * 100)
+            # Subtract money invested at the beginning from Today's value
+            fundProfit = (
+                self.Results[fund]["TodaysValue"] - self.Results[fund]["InvestedMoney"])
             # Append result list with details about each bought fund
             resultList.append(
                 {
@@ -194,32 +214,152 @@ class Investment:
                     "Fund ID": fund,
                     "Investment %": percentageOfInvestment,
                     "Fund profit": fundProfit,
-                    "Fund refund %": self.InvestmentDetails[fund]["RefundRate"],
+                    "Fund refund %": self.Results[fund]["RefundRate"],
                     "Last Change %": self.FundsQuotations[fund].getLastChangePercentage()
                 }
             )
         return resultList
 
-    def saveInvestmentHistoryDayByDay(self, investmentName, destinationPath=None):
-        # Init local variable to look for oldest buy date
-        currentDate = datetime.datetime(2100,1,1)
-        # Loop through each Fund
+    def initFundsOperationsByDate(self) -> dict[datetime.datetime, dict[str, dict[str, float]]]:
+        ordersByDate = {}
         for fund in self.InvestmentDetails:
-            # Check if current fund's buy date is older than recently assigned, if yes assign "older" one
-            if currentDate > parse(self.InvestmentDetails[fund][InvestmentFile_BuyDate]):
-                currentDate = parse(self.InvestmentDetails[fund][InvestmentFile_BuyDate])
-            
-            # Check if Participation Units have been calculated if not calculate it.
-            if self.InvestmentDetails[fund]["ParticipationUnits"] == None:
-                # Calculate Fund's participation units
-                self.InvestmentDetails[fund]["ParticipationUnits"] = (
-                        # Money invested in current fund
-                    float(self.InvestmentDetails[fund][InvestmentFile_Money]) 
-                        # Divide by
-                    /   
-                        # Fund price on a buy date
-                    (self.FundsQuotations[fund].getFundPriceOnDate(self.InvestmentDetails[fund][InvestmentFile_BuyDate]))
+            for i in range(0, len(self.InvestmentDetails[fund])):
+
+                currentDate = parse(
+                    self.InvestmentDetails[fund][i]["BuyDate"]
+                ).date()
+
+                if currentDate not in list(ordersByDate.keys()):
+                    ordersByDate[currentDate] = {}
+
+                ordersByDate[currentDate][fund] = {}
+                ordersByDate[currentDate][fund]["Money"] = self.InvestmentDetails[fund][i]["Money"]
+                ordersByDate[currentDate][fund]["ParticipationUnits"] = (
+                    self.InvestmentDetails[fund][i]["Money"] /
+                    self.FundsQuotations[fund].getFundPriceOnDate(
+                        currentDate.strftime("%Y-%m-%d")
                     )
+                )
+
+        return ordersByDate
+
+    def initFundsCumulatively(self) -> dict[str, dict[str, float]]:
+        fundsCumulatively = {}
+        for fund in self.InvestmentDetails:
+            fundsCumulatively[fund] = {}
+            fundsCumulatively[fund]["ParticipationUnits"] = 0.0
+            fundsCumulatively[fund]["Money"] = 0.0
+
+        return fundsCumulatively
+
+    def appendFundsCumulatively(
+        self,
+        currentDate: datetime.datetime,
+        fundsCumulatively: dict[str,
+                                dict[str, float]],
+        fundsOperationsByDate: dict[datetime.datetime,
+                                    dict[str,
+                                         dict[str, float]]]
+    ) -> dict[str, dict[str, float]]:
+        for fund in fundsOperationsByDate[currentDate]:
+            fundsCumulatively[fund]["ParticipationUnits"] += fundsOperationsByDate[currentDate][fund]["ParticipationUnits"]
+            fundsCumulatively[fund]["Money"] += fundsOperationsByDate[currentDate][fund]["Money"]
+
+        return fundsCumulatively
+
+    def getOutputForCurrentDay(
+        self,
+        currentDate: datetime.datetime,
+        currentInvestValue: float,
+        fundsCumulatively: dict
+    ) -> dict[str, float]:
+        entry = {}
+
+        entry["Date"] = currentDate.strftime("%Y-%m-%d")
+        entry["Value"] = round(currentInvestValue, 2)
+
+        entry["Invested Money"] = sum(
+            [fundsCumulatively[value]["Money"] for value in fundsCumulatively]
+        )
+
+        for fund in fundsCumulatively:
+
+            entry[f"{fund} P.U."] = (
+                fundsCumulatively[fund]["ParticipationUnits"]
+            )
+
+            entry[f"{fund} Value"] = round((
+                fundsCumulatively[fund]["ParticipationUnits"] *
+                self.FundsQuotations[fund].getFundPriceOnDate(
+                    currentDate.strftime("%Y-%m-%d"))
+            ), 2)
+
+            entry[f"{fund} Invested Money"] = round(
+                fundsCumulatively[fund]["Money"], 2
+            )
+
+            try:
+                entry[f"{fund} Refund"] = round(
+                    (
+                        (
+                            (
+                                entry[f"{fund} Value"] /
+                                fundsCumulatively[fund]["Money"]
+                            ) - 1
+                        )
+                    ), 4
+                )
+            except:
+                entry[f"{fund} Refund"] = 0.0
+
+        return entry
+    
+    def calcInvestmentDayByDay(self):
+        fundsOperationsByDate = self.initFundsOperationsByDate()
+        fundsCumulatively = self.initFundsCumulatively()
+
+        currentProcessingDate = sorted(list(fundsOperationsByDate.keys()))[0]
+
+        self.InvestmentDetailsDurationDays = (
+            (datetime.datetime.now().date() - self.StartDate).days
+        )
+        while currentProcessingDate <= datetime.date.today():
+
+            # Init local while loop variable
+            currentValue = 0.0
+
+            if currentProcessingDate in list(fundsOperationsByDate.keys()):
+                fundsCumulatively = self.appendFundsCumulatively(
+                    currentProcessingDate,
+                    fundsCumulatively,
+                    fundsOperationsByDate
+                )
+
+            # Loop through each fund in investment
+            for fund in self.InvestmentDetails:
+                try:
+                    # try to get fund price for current calculation date
+                    price = self.FundsQuotations[fund].getFundPriceOnDate(
+                        currentProcessingDate.strftime("%Y-%m-%d")
+                    )
+
+                    units = fundsCumulatively[fund]["ParticipationUnits"]
+                    currentValue += units * price
+                except:
+                    break
+            else:
+                self.DayByDay.append(
+                    self.getOutputForCurrentDay(
+                        currentDate=currentProcessingDate,
+                        currentInvestValue=currentValue,
+                        fundsCumulatively=fundsCumulatively
+                    )
+                )
+            # Increment calculation date with +1 day
+            currentProcessingDate += datetime.timedelta(days=1)
+
+    def saveInvestmentHistoryDayByDay(self, investmentName, destinationPath=None):
+        self.calcInvestmentDayByDay()
         # Check if destination Path was provided and create appropriate `destinationFilePath`
         if destinationPath == None or not destinationPath:
             destinationFilePath = f"{investmentName}.csv"
@@ -228,47 +368,15 @@ class Investment:
 
         # open file to write Day to day investment stats
         with open(destinationFilePath, "w") as investHistory:
-            
+
             # Init CSV writer and write headers to the file
             writer = csv.writer(investHistory, delimiter='\t')
-            writer.writerow(["Date","Value", "Funds"])
-            
-            # Loop until current calculation date is lower or equal to today
-            while currentDate.date() <=  datetime.date.today():
-                
-                # Init local while loop variable
-                currentValue = 0.0
-                fundsBought = ""
-                
-                # Loop through each fund in investment
-                for fund in self.InvestmentDetails:
-                    
-                    # If current calculation date is greater than buy date than we can perform calculations
-                    if currentDate.date() >= parse(self.InvestmentDetails[fund][InvestmentFile_BuyDate]).date():
-                        
-                        # Append string with list of bought funds on a current calculation date
-                        fundsBought += f"{fund},"
-                        
-                        try:
-                            # try to get fund price for current calculation date
-                            price = self.FundsQuotations[fund].getFundPriceOnDate(currentDate.strftime("%Y-%m-%d"))
-                            units = self.InvestmentDetails[fund]["ParticipationUnits"]
-                            # otherwise sum value variable with current fund's value
-                            currentValue += units * price
-                        except:
-                            break
-                    else:
-                        # If If current calculation date not is greater than buy date add invested money to the value
-                        currentValue += float(self.InvestmentDetails[fund][InvestmentFile_Money])
-                else:
-                    # if for loop was not broken write csv row to the file using initialized writer
-                    writer.writerow(
-                            [
-                                f"{currentDate.strftime("%Y-%m-%d")}",
-                                round(currentValue, 2),
-                                fundsBought[:-1]
-                            ]
-                        )
-                # Increment calculation date with +1 day
-                currentDate += datetime.timedelta(days=1)
+            writer.writerow(list(self.DayByDay[0].keys()))
+            for i in range(0, len(self.DayByDay)):
+                writer.writerow(
+                    list(
+                        self.DayByDay[i].values()
+                    )
+                )
+
         return None

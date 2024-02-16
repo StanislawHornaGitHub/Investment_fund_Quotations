@@ -5,45 +5,67 @@
     present summarized results for all investments.
     
     
-.INITIALIZATION
+
     To create an instance of this class you need to use keywords.
     Keywords for required variables:
         -InvestmentsFilePath <- file path to the JSON file with following structure:
                 {
                     "<Investment_name_1>": {
-                        <Fund_ID_1> : {
-                            "BuyDate": "<yyyy-MM-dd>",
-                            "Money": "<int_or_float>"
+                        "StartDate": "2024-01-25",
+                        "Funds": {
+                            "Fund_ID_1": [
+                                {
+                                    "BuyDate": "<yyyy-MM-dd>",
+                                    "Money": <int_or_float>
+                                },
+                                {
+                                    "BuyDate": "<yyyy-MM-dd>",
+                                    "Money": <int_or_float>
+                                }
+                            ],
+                            "<Fund_ID_2>": [
+                                {
+                                    "BuyDate": "<yyyy-MM-dd>",
+                                    "Money": <int_or_float>
+                                },
+                                {
+                                    "BuyDate": "<yyyy-MM-dd>",
+                                    "Money": <int_or_float>
+                                }
+                            ]
                         },
-                        <Fund_ID_2> : {
-                            "BuyDate": "<yyyy-MM-dd>",
-                            "Money": "<int_or_float>"
-                        }
-                    },
-                    "<Investment_name_1>": {
-                        <Fund_ID_1> : {
-                            "BuyDate": "<yyyy-MM-dd>",
-                            "Money": "<int_or_float>"
-                        },
-                        <Fund_ID_2> : {
-                            "BuyDate": "<yyyy-MM-dd>",
-                            "Money": "<int_or_float>"
+                    "<Investment_name_2>": {
+                        "StartDate": "2024-01-25",
+                        "Funds": {
+                            "Fund_ID_1": [
+                                {
+                                    "BuyDate": "<yyyy-MM-dd>",
+                                    "Money": <int_or_float>
+                                },
+                                {
+                                    "BuyDate": "<yyyy-MM-dd>",
+                                    "Money": <int_or_float>
+                                }
+                            ],
+                            "<Fund_ID_2>": [
+                                {
+                                    "BuyDate": "<yyyy-MM-dd>",
+                                    "Money": <int_or_float>
+                                },
+                                {
+                                    "BuyDate": "<yyyy-MM-dd>",
+                                    "Money": <int_or_float>
+                                }
+                            ]
                         }
                     }
                 }
         
         - FundsList <- an instance of ListOfFunds with already downloaded data from web
         
-.EXAMPLE
-    
-    investmentInstance = Investment(
-        InvestmentDetails = <File_path_to_JSON_file>
-        FundsList = instanceOfListOfFunds
-    )
-
 .NOTES
 
-    Version:            1.0
+    Version:            1.1
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -51,6 +73,8 @@
     ChangeLog:
 
     Date            Who                     What
+    2024-02-16      Stanislaw Horna         According to changes in Investment class
+                                            InvestmentsFile JSON structure has changed.
 
 """
 
@@ -93,8 +117,6 @@ class InvestmentWallet:
             self.Wallets[item] = Investment(
                 InvestmentDetails=investments[item], FundsList=self.FundsList
             )
-
-        self.calcRefundDetails()
 
         return None
 
