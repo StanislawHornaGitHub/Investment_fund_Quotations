@@ -4,14 +4,13 @@
     Class is data structure to store list of Investment class instances, perform calculation on them and
     present summarized results for all investments.
     
-    
-
     To create an instance of this class you need to use keywords.
     Keywords for required variables:
         -InvestmentsFilePath <- file path to the JSON file with following structure:
                 {
                     "<Investment_name_1>": {
-                        "StartDate": "2024-01-25",
+                        "StartDate": "<yyyy-MM-dd>",
+                        "EndDate": "<yyyy-MM-dd>",
                         "Funds": {
                             "Fund_ID_1": [
                                 {
@@ -35,7 +34,8 @@
                             ]
                         },
                     "<Investment_name_2>": {
-                        "StartDate": "2024-01-25",
+                        "StartDate": "<yyyy-MM-dd>",
+                        "EndDate": "<yyyy-MM-dd>",
                         "Funds": {
                             "Fund_ID_1": [
                                 {
@@ -60,12 +60,12 @@
                         }
                     }
                 }
-        
+            EndDate in JSON structure can be set to empty string or does not exist
         - FundsList <- an instance of ListOfFunds with already downloaded data from web
         
 .NOTES
 
-    Version:            1.1
+    Version:            1.2
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -75,6 +75,7 @@
     Date            Who                     What
     2024-02-16      Stanislaw Horna         According to changes in Investment class
                                             InvestmentsFile JSON structure has changed.
+                                            Handling for sold funds as archive information.
 
 """
 
@@ -82,6 +83,8 @@
 import json
 from dataclasses import dataclass, field
 from tabulate import tabulate
+import datetime
+from dateutil.parser import parse
 
 # Custom created function modules
 from Dependencies.Function_Conversion import convertNumericToStrPlsMnsSigns
@@ -114,10 +117,25 @@ class InvestmentWallet:
         # Loop through each configured investment
         # Create separate Investment class instance for each of it
         for item in investments:
+
+            # Parse start date and end date for constructor of investment class
+            startDate = parse(investments[item]["StartDate"]).date()
+            if "EndDate" in list(investments[item].keys()):
+                try:
+                    endDate = parse(investments[item]["EndDate"]).date()
+                except:
+                    endDate = Investment.EndDateNotSet
+            else:
+                endDate = Investment.EndDateNotSet
+
             self.Wallets[item] = Investment(
-                InvestmentDetails=investments[item], FundsList=self.FundsList
+                InvestmentDetails=investments[item]["Funds"],
+                StartDate=startDate,
+                EndDate=endDate,
+                FundsList=self.FundsList
             )
 
+        self.calcWalletResults()
         return None
 
     def calcRefundDetails(self):
@@ -130,39 +148,57 @@ class InvestmentWallet:
         for item in self.Wallets:
             self.WalletsResults[item] = self.Wallets[item].getResult(item)
 
-    def printInvestmentResults(self):
-        self.calcWalletResults()
+    def appendDataListToDisplay(
+        self,
+        fundID: str,
+        dataHeaders: list[str],
+        dataList: list[str | float],
+        columnsWithoutSigns: list[str],
+        columnsWithCurrency: list[str],
+        columnsWithPercentage: list[str]
+    ) -> list[list[str | float]]:
+        # Loop through each line of list of dict containing fund result separately for each investment
+        for i in range(0, len(self.WalletsResults[fundID])):
+            # Append final data set
+            dataList.append(
+                # Convert results for each investment to add currency, % sign and
+                # add + if value is greater or equal than 0 or - if value is less than 0
+                convertNumericToStrPlsMnsSigns(
+                    inputValues=list(
+                        self.WalletsResults[fundID][i].values()),
+                    headers=dataHeaders,
+                    columnsExcludedFromSigns=columnsWithoutSigns,
+                    currencyColumnNames=columnsWithCurrency,
+                    currency=self.Wallets[fundID].Currency,
+                    percentageColumnNames=columnsWithPercentage,
+                )
+            )
+        return dataList
 
+    def printInvestmentResults(self):
         # Init local method variables
         dataList = []
+        tempDataList = []
         dataHeaders = list(
             self.WalletsResults[list(self.WalletsResults.keys())[0]][0].keys()
         )
+        columnsWithoutSigns = ["Days", "Investment %"]
+        columnsWithCurrency = ["Profit", "Profit per day", "Fund profit"]
+        columnsWithPercentage = ["Refund Rate", "Refund per day",
+                                 "Investment %", "Fund refund %", "Last Change %"]
         # Loop through each Investment class instance in self.Wallets dict
         for item in self.Wallets:
-
-            # Loop through each line of list of dict containing fund result separately for each investment
-            for i in range(0, len(self.WalletsResults[item])):
-
-                # Append final data set
-                dataList.append(
-                    # Convert results for each investment to add currency, % sign and
-                    # add + if value is greater or equal than 0 or - if value is less than 0
-                    convertNumericToStrPlsMnsSigns(
-                        inputValues=list(self.WalletsResults[item][i].values()),
-                        headers=dataHeaders,
-                        columnsExcludedFromSigns=["Days", "Investment %"],
-                        currencyColumnNames=["Profit", "Profit per day", "Fund profit"],
-                        currency=self.Wallets[item].Currency,
-                        percentageColumnNames=[
-                            "Refund Rate",
-                            "Refund per day",
-                            "Investment %",
-                            "Fund refund %",
-                            "Last Change %",
-                        ],
-                    )
+            if Investment.PrefixForSoldFunds not in self.WalletsResults[item][0]["Investment Name"]:
+                dataList = self.appendDataListToDisplay(
+                    item, dataHeaders, dataList, columnsWithoutSigns, columnsWithCurrency, columnsWithPercentage
                 )
+            else:
+                tempDataList = self.appendDataListToDisplay(
+                    item, dataHeaders, tempDataList, columnsWithoutSigns, columnsWithCurrency, columnsWithPercentage
+                )
+
+        # Merge active investments with archived ones
+        dataList += tempDataList
         # Print collected dataset as table using tabulate Library
         print("\n")
         print(
@@ -177,4 +213,5 @@ class InvestmentWallet:
     def saveInvestmentHistoryDayByDay(self, destinationPath: str = None):
         # Invoke saving Investment history day by day for each Investment class instance
         for item in self.Wallets:
-            self.Wallets[item].saveInvestmentHistoryDayByDay(item, destinationPath)
+            self.Wallets[item].saveInvestmentHistoryDayByDay(
+                item, destinationPath)

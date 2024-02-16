@@ -15,36 +15,23 @@
     Keywords for required variables:
         -InvestmentDetails <- dict structure in following format:
             {
-                "StartDate": "2024-01-25",
-                "Funds": {
-                    "Fund_ID_1": [
-                        {
-                            "BuyDate": "<yyyy-MM-dd>",
-                            "Money": <int_or_float>
-                        },
-                        {
-                            "BuyDate": "<yyyy-MM-dd>",
-                            "Money": <int_or_float>
-                        }
-                    ],
-                    "<Fund_ID_2>": [
-                        {
-                            "BuyDate": "<yyyy-MM-dd>",
-                            "Money": <int_or_float>
-                        },
-                        {
-                            "BuyDate": "<yyyy-MM-dd>",
-                            "Money": <int_or_float>
-                        }
-                    ]
+                <Fund_ID_1> : {
+                    "BuyDate": "<yyyy-MM-dd>",
+                    "Money": "<int_or_float>"
+                },
+                <Fund_ID_2> : {
+                    "BuyDate": "<yyyy-MM-dd>",
+                    "Money": "<int_or_float>"
                 }
             }
-        
+        - StartDate <- start date of investment to calculate correctly duration, profit, refund per day
+        - EndDate <- end date of investment to correctly duration, profit, refund per day and
+                        stop calculating the bought participation units value.
         - FundsList <- an instance of ListOfFunds with already downloaded data from web
 
 .NOTES
 
-    Version:            1.1
+    Version:            1.2
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -55,6 +42,7 @@
     2024-02-16      Stanislaw Horna         Functionality to handle multiple orders of the same Fund added.
                                             InvestmentDetails structure has changed.
                                             Bugfix - Doubled data in InvestmentDayByDay CSV
+                                            Handling for sold funds as archive information.
 
 """
 # Official and 3-rd party imports
@@ -76,8 +64,10 @@ class Investment:
 
     # Initialization Variables
     InvestmentDetails: dict[str, dict[str, float | str]]
+    StartDate: datetime.date
+    EndDate: datetime.date
     FundsList: ListOfFunds
-
+    
     # Calculated Variables
     Currency: str = field(
         init=False,
@@ -97,9 +87,6 @@ class Investment:
         init=False,
         default_factory=float
     )
-    StartDate: datetime.datetime = field(
-        init=False
-    )
     Results: dict[str, dict[str, float | str]] = field(
         init=False,
         default_factory=dict
@@ -112,11 +99,12 @@ class Investment:
         init=False
     )
 
+    # Constant Variables
+    EndDateNotSet = datetime.datetime(2200, 1, 1).date()
+    PrefixForSoldFunds = "(Arch.)"
+    
     def __post_init__(self):
         currencySet = set()
-
-        self.StartDate = parse(self.InvestmentDetails["StartDate"]).date()
-        self.InvestmentDetails = self.InvestmentDetails["Funds"]
         # Loop through selected funds, assign them to the class variable `FundsQuotations`, add fund currency to the set
         for fund in self.InvestmentDetails:
             self.FundsQuotations[fund] = self.FundsList.getFundByID(fund)
@@ -128,7 +116,9 @@ class Investment:
         while len(currencySet):
             self.Currency += " / " + currencySet.pop()
 
+        self.calcInvestmentDuration()
         self.calcInvestmentDayByDay()
+        self.calcRefundDetails()
         return None
 
     def calcRefundDetails(self):
@@ -157,6 +147,11 @@ class Investment:
         # Calculate overall refund rate of investment
         self.refundRate = ((self.TodaysValue / self.InvestedMoney) - 1) * 100
         return None
+    
+    def isEndDateSet(self)-> bool:
+        if self.EndDate != Investment.EndDateNotSet:
+            return True
+        return False
 
     def getProfit(self) -> float:
         return round(self.Profit, 2)
@@ -169,19 +164,21 @@ class Investment:
 
     def getResult(self, name: str) -> list[dict[str, float | str]]:
 
-        self.calcRefundDetails()
-
         # Init local temp variables
         resultList = []
         profit = self.getProfit()
         refund = self.getRefundRate()
         timeFrame = self.getInvestmentDurationDays()
-        blankSpaceString = "-"
-
+        blankSpaceString = ""
+        prefixForArchived = ""
+        
+        if self.isEndDateSet():
+            prefixForArchived = Investment.PrefixForSoldFunds
+        
         # Append result list with stats of complete investment
         resultList.append(
             {
-                "Investment Name": name,
+                "Investment Name": f"{prefixForArchived} {name}",
                 "Profit": profit,
                 "Refund Rate": refund,
                 "Days": timeFrame,
@@ -194,7 +191,10 @@ class Investment:
                 "Last Change %": blankSpaceString
             }
         )
-
+        # If end date is set do not display fund details
+        if self.isEndDateSet():
+            return resultList
+            
         # Loop through funds bought in investment
         for fund in self.InvestmentDetails:
             # Divide Today's fund value by invested money and multiply by 100 to receive %
@@ -315,16 +315,27 @@ class Investment:
 
         return entry
     
+    def calcInvestmentDuration(self):
+        if self.EndDate == Investment.EndDateNotSet:
+            self.InvestmentDetailsDurationDays = (
+                (datetime.datetime.now().date() - self.StartDate).days
+            )
+        else:
+            self.InvestmentDetailsDurationDays = (
+                (self.EndDate - self.StartDate).days
+            )
+    
     def calcInvestmentDayByDay(self):
+        
         fundsOperationsByDate = self.initFundsOperationsByDate()
         fundsCumulatively = self.initFundsCumulatively()
 
         currentProcessingDate = sorted(list(fundsOperationsByDate.keys()))[0]
-
-        self.InvestmentDetailsDurationDays = (
-            (datetime.datetime.now().date() - self.StartDate).days
-        )
-        while currentProcessingDate <= datetime.date.today():
+        
+        while (
+            (currentProcessingDate <= datetime.date.today()) and
+            (currentProcessingDate <= self.EndDate)
+            ):
 
             # Init local while loop variable
             currentValue = 0.0
