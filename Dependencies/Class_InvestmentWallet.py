@@ -65,7 +65,7 @@
         
 .NOTES
 
-    Version:            1.2
+    Version:            1.3
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -73,9 +73,10 @@
     ChangeLog:
 
     Date            Who                     What
-    2024-02-16      Stanislaw Horna         According to changes in Investment class
+    2024-02-16      Stanisław Horna         According to changes in Investment class
                                             InvestmentsFile JSON structure has changed.
                                             Handling for sold funds as archive information.
+    2024-02-20      Stanisław Horna         Refactored investment refund table
 
 """
 
@@ -101,7 +102,7 @@ class InvestmentWallet:
     InvestmentsFilePath: str
     FundsList: ListOfFunds
 
-    TableFormat: str = "github"
+    TableFormat: str = "simple_grid"
 
     # Calculated Variables
     Wallets: dict[str, Investment] = field(default_factory=dict, init=False)
@@ -173,6 +174,8 @@ class InvestmentWallet:
                     percentageColumnNames=columnsWithPercentage,
                 )
             )
+            
+        dataList.append([])
         return dataList
 
     def printInvestmentResults(self):
@@ -183,9 +186,8 @@ class InvestmentWallet:
             self.WalletsResults[list(self.WalletsResults.keys())[0]][0].keys()
         )
         columnsWithoutSigns = ["Days", "Investment %"]
-        columnsWithCurrency = ["Profit", "Profit per day", "Fund profit"]
-        columnsWithPercentage = ["Refund Rate", "Refund per day",
-                                 "Investment %", "Fund refund %", "Last Change %"]
+        columnsWithCurrency = ["Profit", "Profit daily"]
+        columnsWithPercentage = ["Refund Rate","Refund daily","Refund yearly","Investment %", "Fund refund %"]
         # Loop through each Investment class instance in self.Wallets dict
         for item in self.Wallets:
             if Investment.PrefixForSoldFunds not in self.WalletsResults[item][0]["Investment Name"]:
@@ -199,11 +201,12 @@ class InvestmentWallet:
 
         # Merge active investments with archived ones
         dataList += tempDataList
+
         # Print collected dataset as table using tabulate Library
         print("\n")
         print(
             tabulate(
-                tabular_data=dataList, tablefmt=self.TableFormat, headers=dataHeaders
+                tabular_data=dataList[:-1], tablefmt=self.TableFormat, headers=dataHeaders
             )
         )
         print("\n")

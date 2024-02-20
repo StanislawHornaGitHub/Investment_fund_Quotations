@@ -31,7 +31,7 @@
 
 .NOTES
 
-    Version:            1.2
+    Version:            1.3
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -43,6 +43,7 @@
                                             InvestmentDetails structure has changed.
                                             Bugfix - Doubled data in InvestmentDayByDay CSV
                                             Handling for sold funds as archive information.
+    2024-02-20      Stanisław Horna         Refactored investment refund table
 
 """
 # Official and 3-rd party imports
@@ -179,16 +180,14 @@ class Investment:
         resultList.append(
             {
                 "Investment Name": f"{prefixForArchived} {name}",
-                "Profit": profit,
-                "Refund Rate": refund,
                 "Days": timeFrame,
-                "Profit per day": (profit / timeFrame),
-                "Refund per day": (refund / timeFrame),
                 "Fund ID": blankSpaceString,
                 "Investment %": blankSpaceString,
-                "Fund profit": blankSpaceString,
-                "Fund refund %": blankSpaceString,
-                "Last Change %": blankSpaceString
+                "Profit": profit,
+                "Refund Rate": refund,
+                "Profit daily": (profit / timeFrame),
+                "Refund daily": (refund / timeFrame),
+                "Refund yearly": (refund / timeFrame) * 365,
             }
         )
         # If end date is set do not display fund details
@@ -199,24 +198,23 @@ class Investment:
         for fund in self.InvestmentDetails:
             # Divide Today's fund value by invested money and multiply by 100 to receive %
             percentageOfInvestment = (
-                (self.Results[fund]["TodaysValue"] / self.InvestedMoney) * 100)
+                (self.Results[fund]["TodaysValue"] / (self.InvestedMoney + profit)) * 100)
             # Subtract money invested at the beginning from Today's value
             fundProfit = (
                 self.Results[fund]["TodaysValue"] - self.Results[fund]["InvestedMoney"])
+            
             # Append result list with details about each bought fund
             resultList.append(
                 {
                     "Investment Name": blankSpaceString,
-                    "Profit": blankSpaceString,
-                    "Refund Rate": blankSpaceString,
                     "Days": blankSpaceString,
-                    "Profit per day": blankSpaceString,
-                    "Refund per day": blankSpaceString,
                     "Fund ID": fund,
                     "Investment %": percentageOfInvestment,
-                    "Fund profit": fundProfit,
-                    "Fund refund %": self.Results[fund]["RefundRate"],
-                    "Last Change %": self.FundsQuotations[fund].getLastChangePercentage()
+                    "Profit": fundProfit,
+                    "Refund Rate":self.Results[fund]["RefundRate"],
+                    "Profit daily": fundProfit / timeFrame,
+                    "Refund daily": self.Results[fund]["RefundRate"] / timeFrame,
+                    "Refund yearly": (self.Results[fund]["RefundRate"] / timeFrame) * 365,
                 }
             )
         return resultList
