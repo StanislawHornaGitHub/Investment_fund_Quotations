@@ -11,7 +11,7 @@
 
 .NOTES
 
-    Version:            1.0
+    Version:            1.1
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -19,6 +19,7 @@
     ChangeLog:
 
     Date            Who                     What
+    2024-02-21      Stanisław Horna         Not used getConfiguration() input argument deleted.
 
 """
 
@@ -31,7 +32,7 @@ from Dependencies.Variables_Config import *
 
 
 # Function to read config file
-def getConfiguration(options):
+def getConfiguration():
     checkIfConfigFileExists()
 
     # Read and load config file to the variable which is later returned

@@ -11,7 +11,7 @@
 
 .NOTES
 
-    Version:            1.0
+    Version:            1.1
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -19,7 +19,8 @@
     ChangeLog:
 
     Date            Who                     What
-
+    2024-02-21      Stanisław Horna         Raising an custom exception in .getFundByID(),
+                                            if fund with ID passed as method argument does not exist
 """
 # Official and 3-rd party imports
 import json
@@ -129,4 +130,10 @@ class ListOfFunds:
         return None
 
     def getFundByID(self, ID: str) -> AnalizyFund:
-        return self.ListOfFunds[ID]
+        # try to get fund with ID passed to method.
+        # if it is not available raise an error to provide URL to config file
+        try:
+            fundToReturn = self.ListOfFunds[ID]
+        except KeyError:
+            raise Exception(f"Missing Fund with ID {ID}, please provide appropriate URL to CONFIG file")
+        return fundToReturn

@@ -76,7 +76,7 @@
 
 .NOTES
 
-    Version:            1.2
+    Version:            1.3
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -91,6 +91,8 @@
     2024-02-07      Stanislaw Horna         Refactored class code. 
                                             Improved Investment stats.
                                             Displaying console results in tables
+    2024-02-21      Stanisław Horna         Investments which are ended can be pulled from InvestmentDayByDay CSV file.
+                                            Dedicated result presenting method for investments consisted of only 1 fund
 """
 
 import argparse
@@ -127,7 +129,7 @@ def main(options):
 
     setCorrectPath()
 
-    config = getConfiguration(options)
+    config = getConfiguration()
 
     Funds = ListOfFunds(config[FundsToCheckURLsKey])
     Funds.saveTodaysResults(config[DailyReportDirectoryName])

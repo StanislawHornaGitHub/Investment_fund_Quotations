@@ -31,7 +31,7 @@
 
 .NOTES
 
-    Version:            1.3
+    Version:            1.4
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -44,9 +44,12 @@
                                             Bugfix - Doubled data in InvestmentDayByDay CSV
                                             Handling for sold funds as archive information.
     2024-02-20      Stanisław Horna         Refactored investment refund table
+    2024-02-21      Stanisław Horna         Investments which are ended can be pulled from InvestmentDayByDay CSV file.
+                                            Dedicated result presenting method for investments consisted of only 1 fund
 
 """
 # Official and 3-rd party imports
+import os
 import csv
 import datetime
 from dateutil.parser import parse
@@ -54,6 +57,7 @@ from dataclasses import dataclass, field
 
 # Custom created function modules
 from Dependencies.Variable_InvestmentFile import *
+from Dependencies.Function_config import getConfiguration
 
 # Custom created class modules
 from Dependencies.Class_ListOfFund import ListOfFunds
@@ -65,6 +69,7 @@ class Investment:
 
     # Initialization Variables
     InvestmentDetails: dict[str, dict[str, float | str]]
+    InvestmentName: str
     StartDate: datetime.date
     EndDate: datetime.date
     FundsList: ListOfFunds
@@ -106,22 +111,58 @@ class Investment:
     
     def __post_init__(self):
         currencySet = set()
-        # Loop through selected funds, assign them to the class variable `FundsQuotations`, add fund currency to the set
-        for fund in self.InvestmentDetails:
-            self.FundsQuotations[fund] = self.FundsList.getFundByID(fund)
-            currencySet.add(self.FundsQuotations[fund].getCurrency())
+        
+        # If investment date is set and try to import data from previously created file
+        if self.isEndDateSet() and self.importArchivedInvestmentFromFile():
+            # get investment currency
+            firstDay = self.DayByDay[0]
+            for column in [col for col in list(firstDay.keys()) if "Currency" in col]:
+                currencySet.add(firstDay[column])
+            
+            self.Currency = currencySet.pop()
+            while len(currencySet):
+                self.Currency += " / " + currencySet.pop()
+        else:
+            # Loop through selected funds, assign them to the class variable `FundsQuotations`, add fund currency to the set
+            for fund in self.InvestmentDetails:
+                self.FundsQuotations[fund] = self.FundsList.getFundByID(fund)
+                currencySet.add(self.FundsQuotations[fund].getCurrency())
 
-        # append currency string with the last set item
-        self.Currency = currencySet.pop()
-        # loop while currency set is not empty and add each currency
-        while len(currencySet):
-            self.Currency += " / " + currencySet.pop()
-
+            # append currency string with the last set item
+            self.Currency = currencySet.pop()
+            # loop while currency set is not empty and add each currency
+            while len(currencySet):
+                self.Currency += " / " + currencySet.pop()
+            
+            self.calcInvestmentDayByDay()
+        
         self.calcInvestmentDuration()
-        self.calcInvestmentDayByDay()
         self.calcRefundDetails()
         return None
 
+    def importArchivedInvestmentFromFile(self) -> bool:
+        # Import config file to get localization of DayByDay investment files
+        config = getConfiguration()
+        investFilePath = f"{config["InvestmentHistoryDayByDayDirectory"]}/{self.InvestmentName}.csv"
+        # Check if file exists
+        if os.path.isfile(investFilePath):
+            # Open file and assign it to class attribute
+            with open(investFilePath, "r") as file:
+                self.DayByDay = list((csv.DictReader(file, delimiter='\t')))
+            
+            # Convert number values to float datatype
+            for row in self.DayByDay:
+                for col in row:
+                    try:
+                        row[col] = float(row[col])
+                    except:
+                        pass
+            
+            # Check if found file ends with the same date as End investment date is set
+            if parse(self.DayByDay[-1]["Date"]).date() == self.EndDate:
+                return True
+        return False
+                
     def calcRefundDetails(self):
         for fund in self.InvestmentDetails:
             self.Results[fund] = {}
@@ -163,7 +204,7 @@ class Investment:
     def getInvestmentDurationDays(self) -> int:
         return self.InvestmentDetailsDurationDays
 
-    def getResult(self, name: str) -> list[dict[str, float | str]]:
+    def getResult(self) -> list[dict[str, float | str]]:
 
         # Init local temp variables
         resultList = []
@@ -179,7 +220,7 @@ class Investment:
         # Append result list with stats of complete investment
         resultList.append(
             {
-                "Investment Name": f"{prefixForArchived} {name}",
+                "Investment Name": f"{prefixForArchived} {self.InvestmentName}",
                 "Days": timeFrame,
                 "Fund ID": blankSpaceString,
                 "Investment %": blankSpaceString,
@@ -217,6 +258,10 @@ class Investment:
                     "Refund yearly": (self.Results[fund]["RefundRate"] / timeFrame) * 365,
                 }
             )
+        if len(self.InvestmentDetails) == 1:
+            resultList[0]["Fund ID"] = resultList[1]["Fund ID"]
+            resultList[0]["Investment %"] = resultList[1]["Investment %"]
+            resultList = [resultList[0]]
         return resultList
 
     def initFundsOperationsByDate(self) -> dict[datetime.datetime, dict[str, dict[str, float]]]:
@@ -310,6 +355,8 @@ class Investment:
                 )
             except:
                 entry[f"{fund} Refund"] = 0.0
+            
+            entry[f"{fund} Currency"] = self.FundsQuotations[fund].getCurrency()
 
         return entry
     
@@ -368,12 +415,12 @@ class Investment:
             # Increment calculation date with +1 day
             currentProcessingDate += datetime.timedelta(days=1)
 
-    def saveInvestmentHistoryDayByDay(self, investmentName, destinationPath=None):
+    def saveInvestmentHistoryDayByDay(self, destinationPath=None):
         # Check if destination Path was provided and create appropriate `destinationFilePath`
         if destinationPath == None or not destinationPath:
-            destinationFilePath = f"{investmentName}.csv"
+            destinationFilePath = f"{self.InvestmentName}.csv"
         else:
-            destinationFilePath = f"{destinationPath}/{investmentName}.csv"
+            destinationFilePath = f"{destinationPath}/{self.InvestmentName}.csv"
 
         # open file to write Day to day investment stats
         with open(destinationFilePath, "w") as investHistory:
