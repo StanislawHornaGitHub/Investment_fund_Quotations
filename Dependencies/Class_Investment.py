@@ -369,6 +369,8 @@ class Investment:
             self.InvestmentDetailsDurationDays = (
                 (self.EndDate - self.StartDate).days
             )
+        # Subtracting 1 because on buy date fund is only bought and it is not possible to make any profit
+        self.InvestmentDetailsDurationDays -= 1
     
     def calcInvestmentDayByDay(self):
         
