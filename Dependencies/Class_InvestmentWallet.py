@@ -77,6 +77,7 @@
                                             InvestmentsFile JSON structure has changed.
                                             Handling for sold funds as archive information.
     2024-02-20      Stanisław Horna         Refactored investment refund table
+    2024-02-21      Stanisław Horna         Adjustments to calling Investment Class contractor and methods.
 
 """
 
@@ -131,6 +132,7 @@ class InvestmentWallet:
 
             self.Wallets[item] = Investment(
                 InvestmentDetails=investments[item]["Funds"],
+                InvestmentName = item,
                 StartDate=startDate,
                 EndDate=endDate,
                 FundsList=self.FundsList
@@ -147,7 +149,7 @@ class InvestmentWallet:
     def calcWalletResults(self):
         # Invoke results calculation for each child Investment class
         for item in self.Wallets:
-            self.WalletsResults[item] = self.Wallets[item].getResult(item)
+            self.WalletsResults[item] = self.Wallets[item].getResult()
 
     def appendDataListToDisplay(
         self,
@@ -216,5 +218,4 @@ class InvestmentWallet:
     def saveInvestmentHistoryDayByDay(self, destinationPath: str = None):
         # Invoke saving Investment history day by day for each Investment class instance
         for item in self.Wallets:
-            self.Wallets[item].saveInvestmentHistoryDayByDay(
-                item, destinationPath)
+            self.Wallets[item].saveInvestmentHistoryDayByDay(destinationPath)

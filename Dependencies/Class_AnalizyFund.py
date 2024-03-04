@@ -75,14 +75,19 @@ class AnalizyFund:
     def getLastChangePercentage(self) -> float:
         return self.ChangePercentage1D
 
-    def getFundPriceOnDate(self, date) -> float:
-        return float(
-            [
-                item
-                for item in self.QuotationJSON["Price"]
-                if item[analizyplAPIresponse_QuotationDate] == date
-            ][0][analizyplAPIresponse_QuotationValue]
-        )
+    def getFundPriceOnDate(self, date) -> float | None:
+        try:
+            priceToReturn = float(
+                [
+                    item
+                    for item in self.QuotationJSON["Price"]
+                    if item[analizyplAPIresponse_QuotationDate] == date
+                ][0][analizyplAPIresponse_QuotationValue]
+            )
+        except:
+            priceToReturn = None
+        
+        return priceToReturn
 
     def downloadLatestDetails(self):
 
