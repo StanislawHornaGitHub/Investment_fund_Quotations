@@ -31,7 +31,7 @@
 
 .NOTES
 
-    Version:            1.4
+    Version:            1.5
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -48,6 +48,8 @@
                                             Dedicated result presenting method for investments consisted of only 1 fund
     2024-03-04      Stanisław Horna         Handling for investments containing funds which do not receive updated data
                                             at the same time.
+    2024-03-08      Stanisław Horna         Multiple payments for same fund at the same date summed up,
+                                            instead of taking the last one
 
 """
 # Official and 3-rd party imports
@@ -319,13 +321,17 @@ class Investment:
                     ordersByDate[currentDate] = {}
 
                 # create inner dict for particular fund
-                ordersByDate[currentDate][fund] = {}
+                if fund not in list(ordersByDate[currentDate].keys()):
+                    ordersByDate[currentDate][fund] = {
+                        "Money": 0,
+                        "ParticipationUnits": 0
+                    }
 
                 # get invested money at this day
-                ordersByDate[currentDate][fund]["Money"] = self.InvestmentDetails[fund][i]["Money"]
-
+                ordersByDate[currentDate][fund]["Money"] += self.InvestmentDetails[fund][i]["Money"]
+                
                 # calculate fund participation units for this day
-                ordersByDate[currentDate][fund]["ParticipationUnits"] = (
+                ordersByDate[currentDate][fund]["ParticipationUnits"] += (
                     self.InvestmentDetails[fund][i]["Money"] /
                     self.FundsQuotations[fund].getFundPriceOnDate(
                         currentDate.strftime("%Y-%m-%d")
