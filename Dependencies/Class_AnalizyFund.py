@@ -54,7 +54,7 @@ class AnalizyFund:
     CategoryShortCut: str = field(init=False)
 
     def __post_init__(self):
-        
+
         # Collect following values from provided URL
         urlBreakdown = self.URL.split("/")
         self.Category = urlBreakdown[3]
@@ -99,7 +99,7 @@ class AnalizyFund:
         return priceToReturn
 
     def getLastQuotationDate(self) -> datetime.date:
-        
+
         # return date parsed to datetime type from last entry in quotation dict
         return (
             parse(
@@ -131,8 +131,8 @@ class AnalizyFund:
             # Increment value for next iteration if value will be still None
             daysToSubtract += 1
 
-        # return found price, 
-        # if while loop will not find the valid price, 
+        # return found price,
+        # if while loop will not find the valid price,
         # None will be returned
         return priceToReturn
 
@@ -176,13 +176,18 @@ class AnalizyFund:
             # timeFrame <- the weight of the value
             sum(
                 [
-                    item["timeFrameInDays"] * item["refund"]
+                    item["timeFrameInDays"] * item["refund"] * item["InvestedMoney"]
                     for item in paymentPeriods
                 ]
             )
             /  # divided
             # sum of the days taken under the consideration
-            numOfDays
+            sum(
+                [
+                    item["timeFrameInDays"] * item["InvestedMoney"]
+                    for item in paymentPeriods
+                ]
+            )
         )
 
         # calculate the refund per day
@@ -191,7 +196,6 @@ class AnalizyFund:
             /
             numOfDays
         )
-
         # return predefined dict
         return {
             "FundName": self.Name,

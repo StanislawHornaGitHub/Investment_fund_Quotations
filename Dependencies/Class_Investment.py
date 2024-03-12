@@ -189,14 +189,15 @@ class Investment:
         # create a summary for each period between payments
         for fund in self.InvestmentDetails:
             refundPeriods = []
-
+            investedMoney  = 0
             for i in range(0, len(self.InvestmentDetails[fund])):
-
+                investedMoney += self.InvestmentDetails[fund][i]["Money"]
                 refundPeriods.append(
                     {
                         "startDate": parse(self.InvestmentDetails[fund][i]["BuyDate"]).date(),
                         "endDate": None,
                         "timeFrameInDays": None,
+                        "InvestedMoney": investedMoney,
                         "refund": None
                     }
                 )
