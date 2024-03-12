@@ -21,6 +21,9 @@
     2024-03-11      Stanisław Horna         getSyntheticRefundData to analyze bought funds based on quotation only.
                                             getLastQuotationDate to return date of last quotation received from API 
                                             getNearestFundPrice to find nearest fund price to provided date.
+    2024-03-12      Stanisław Horna         getSyntheticRefundData -> getRefundAnalysis
+                                            method calcs refund analysis, based on 
+                                            the payments, timing and invested money
 
 """
 
@@ -136,7 +139,7 @@ class AnalizyFund:
         # None will be returned
         return priceToReturn
 
-    def getQuotationRefundAnalysis(self, paymentPeriods: dict[str, any]) -> dict[str, float]:
+    def getRefundAnalysis(self, paymentPeriods: dict[str, any]) -> dict[str, float]:
 
         # loop through payments
         for i in range(0, len(paymentPeriods)):

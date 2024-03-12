@@ -31,7 +31,7 @@
 
 .NOTES
 
-    Version:            1.5
+    Version:            1.6
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -50,6 +50,8 @@
                                             at the same time.
     2024-03-08      Stanisław Horna         Multiple payments for same fund at the same date summed up,
                                             instead of taking the last one
+    2024-03-12      Stanisław Horna         getRefundAnalysis returns refund analysis, based on 
+                                            the payments, timing and invested money of each fund in self investment
 
 """
 # Official and 3-rd party imports
@@ -182,7 +184,7 @@ class Investment:
         # If file does not exist return False as nothing can be done
         return False
 
-    def calcQuotationRefundAnalysis(self) -> None:
+    def calcRefundAnalysis(self) -> None:
 
         refundPeriods = {}
 
@@ -213,15 +215,15 @@ class Investment:
 
             self.QuotationRefunds[fund] = (
                 self.FundsQuotations[fund]
-            ).getQuotationRefundAnalysis(refundPeriods)
+            ).getRefundAnalysis(refundPeriods)
 
         return None
     
-    def getQuotationRefundAnalysis(self) -> dict[str , dict[str, float]]:
+    def getRefundAnalysis(self) -> dict[str , dict[str, float]]:
         
         try:
             # invoke analysis calculation
-            self.calcQuotationRefundAnalysis()
+            self.calcRefundAnalysis()
         except:
             return None
         

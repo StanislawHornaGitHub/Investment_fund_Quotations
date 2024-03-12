@@ -69,13 +69,13 @@
         --Latest_Fund_Data_Only <- displays todays funds' stats
         
         --Print_Investment_Refund_Calculation <- Prints actual results of investments,
-            based on the time and amount of money invested
+            based on the amount of money invested
         
         --Quotations_Output_Format {CSV,JSON} <- accepts only CSV or JSON as an input.
             According to provided format Historical quotations will be saved.
             
-        --Print_Quotation_Refund_Analysis <- Prints refund analysis calculated,
-            based on the fund prices only
+        --Print_Refund_Analysis <- Prints refund analysis calculated,
+            based on the payments, timing and invested money
 
 .OUTPUTS
     None
@@ -99,7 +99,8 @@
                                             Displaying console results in tables
     2024-02-21      Stanisław Horna         Investments which are ended can be pulled from InvestmentDayByDay CSV file.
                                             Dedicated result presenting method for investments consisted of only 1 fund
-    2024-03-12      Stanisław Horna         Analysis based on the fund prices only implemented 
+    2024-03-12      Stanisław Horna         Analysis based on the payments, timing and invested money implemented
+
 """
 
 import argparse
@@ -128,9 +129,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "-a",
-    "--Print_Quotation_Refund_Analysis",
+    "--Print_Refund_Analysis",
     action="store_true",
-    help="Prints refund analysis calculated based on the fund prices only.",
+    help="Prints refund analysis calculated, based on the payments, timing and invested money.",
 )
 parser.add_argument(
     "--Quotations_Output_Format",
@@ -156,7 +157,7 @@ def main(options):
     )
 
     if os.path.isfile(config[InvestmentsFilePathKey]):
-        investments = InvestmentWallet(
+        investments: InvestmentWallet = InvestmentWallet(
             InvestmentsFilePath=config[InvestmentsFilePathKey],
             FundsList=Funds
         )
@@ -166,39 +167,49 @@ def main(options):
         )
 
         printInvestmentRefundCalculation(investments, options)
-        
-        printQuotationRefundAnalysis(investments, options)
+
+        printRefundAnalysis(investments, options)
 
     exit(0)
 
 
 def setCorrectPath() -> None:
+    
     file_path = os.path.realpath(__file__)
     file_path = "/".join(file_path.split("/")[:-1])
     os.chdir(file_path)
+
+    return None
+
+
+def printLatestFundData(Funds: ListOfFunds, options: argparse.Namespace) -> None:
     
-    return None
-
-
-def printLatestFundData(Funds, options) -> None:
+    # Check if appropriate param was used
     if options.Print_Latest_Fund_Data:
-        Funds.printFundInfo()
         
+        Funds.printFundInfo()
+
     return None
 
 
-def saveHistoricalQuotations(Funds: ListOfFunds, destinationDir: str, options) -> None:
+def saveHistoricalQuotations(Funds: ListOfFunds, destinationDir: str, options: argparse.Namespace) -> None:
+    
+    # Check if appropriate param was used
     if options.Quotations_Output_Format == "JSON":
+        
         Funds.saveQuotationJSON(destinationDir)
 
+    # Check if appropriate param was used
     if options.Quotations_Output_Format == "CSV":
+        
         Funds.saveQuotationCSV(destinationDir)
 
     return None
 
 
-def printInvestmentRefundCalculation(investments, options) -> None:
+def printInvestmentRefundCalculation(investments: InvestmentWallet, options: argparse.Namespace) -> None:
 
+    # Check if appropriate param was used
     if options.Print_Investment_Refund_Calculation:
 
         investments.printInvestmentResults()
@@ -206,11 +217,12 @@ def printInvestmentRefundCalculation(investments, options) -> None:
     return None
 
 
-def printQuotationRefundAnalysis(investments, options) -> None:
+def printRefundAnalysis(investments: InvestmentWallet, options: argparse.Namespace) -> None:
 
-    if options.Print_Quotation_Refund_Analysis:
+    # Check if appropriate param was used
+    if options.Print_Refund_Analysis:
 
-        investments.printQuotationRefundAnalysis()
+        investments.printRefundAnalysis()
 
     return None
 

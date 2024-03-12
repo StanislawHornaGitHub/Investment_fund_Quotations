@@ -79,7 +79,7 @@
     2024-02-20      Stanisław Horna         Refactored investment refund table
     2024-02-21      Stanisław Horna         Adjustments to calling Investment Class contractor and methods.
     2024-03-12      Stanisław Horna         printQuotationRefundAnalysis method to display analysis,
-                                            based on fund quotation only
+                                            based on the payments, timing and invested money
 
 """
 
@@ -220,7 +220,7 @@ class InvestmentWallet:
 
         return None
 
-    def printQuotationRefundAnalysis(self):
+    def printRefundAnalysis(self):
         
         dataList = []
         
@@ -229,7 +229,7 @@ class InvestmentWallet:
             
             # Check if refund analysis is not None
             # it will be None for each archived investment
-            if (refund:= item.getQuotationRefundAnalysis()) != None:
+            if (refund:= item.getRefundAnalysis()) != None:
                 
                 # append dataList with values from analysis (without headers)
                 for fund in refund.values():
