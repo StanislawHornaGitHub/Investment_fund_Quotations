@@ -67,16 +67,22 @@
     
 .INPUTS
         --Latest_Fund_Data_Only <- displays todays funds' stats
-        --Print_Investment_Refund_Calculation <- prints investment refund for today
+        
+        --Print_Investment_Refund_Calculation <- Prints actual results of investments,
+            based on the time and amount of money invested
+        
         --Quotations_Output_Format {CSV,JSON} <- accepts only CSV or JSON as an input.
             According to provided format Historical quotations will be saved.
+            
+        --Print_Quotation_Refund_Analysis <- Prints refund analysis calculated,
+            based on the fund prices only
 
 .OUTPUTS
     None
 
 .NOTES
 
-    Version:            1.3
+    Version:            1.4
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -93,6 +99,7 @@
                                             Displaying console results in tables
     2024-02-21      Stanisław Horna         Investments which are ended can be pulled from InvestmentDayByDay CSV file.
                                             Dedicated result presenting method for investments consisted of only 1 fund
+    2024-03-12      Stanisław Horna         Analysis based on the fund prices only implemented 
 """
 
 import argparse
@@ -103,6 +110,7 @@ from Dependencies.Function_config import *
 programSynopsis = """
 Program to download funds quotations and calculate profits of investments.
 Without params program is creating report about todays funds' stats in JSON
+and calculating investment refund day by day which is saved as CSV file.
 """
 
 parser = argparse.ArgumentParser(description=programSynopsis)
@@ -110,13 +118,19 @@ parser.add_argument(
     "-l",
     "--Print_Latest_Fund_Data",
     action="store_true",
-    help="Prints current fund's details",
+    help="Prints current fund's details.",
 )
 parser.add_argument(
     "-i",
     "--Print_Investment_Refund_Calculation",
     action="store_true",
-    help="Prints result of investments refund",
+    help="Prints actual results of investments based on the time and amount of money invested.",
+)
+parser.add_argument(
+    "-a",
+    "--Print_Quotation_Refund_Analysis",
+    action="store_true",
+    help="Prints refund analysis calculated based on the fund prices only.",
 )
 parser.add_argument(
     "--Quotations_Output_Format",
@@ -156,28 +170,51 @@ def main(options):
     exit(0)
 
 
-def setCorrectPath():
+def setCorrectPath() -> None:
     file_path = os.path.realpath(__file__)
     file_path = "/".join(file_path.split("/")[:-1])
     os.chdir(file_path)
+    
+    return None
 
 
-def printLatestFundData(Funds, options):
+def printLatestFundData(Funds, options) -> None:
     if options.Print_Latest_Fund_Data:
         Funds.printFundInfo()
+        
+    return None
 
 
-def saveHistoricalQuotations(Funds: ListOfFunds, destinationDir: str, options):
+def saveHistoricalQuotations(Funds: ListOfFunds, destinationDir: str, options) -> None:
     if options.Quotations_Output_Format == "JSON":
         Funds.saveQuotationJSON(destinationDir)
 
     if options.Quotations_Output_Format == "CSV":
         Funds.saveQuotationCSV(destinationDir)
 
+    return None
 
-def printInvestmentRefundCalculation(investments, options):
+
+def printInvestmentRefundCalculation(investments, options) -> None:
+
     if options.Print_Investment_Refund_Calculation:
+
         investments.printInvestmentResults()
 
+    return None
 
-main(parser.parse_args())
+
+def printQuotationRefundAnalysis(investments, options) -> None:
+
+    if options.Print_Quotation_Refund_Analysis:
+
+        investments.printQuotationRefundAnalysis()
+
+    return None
+
+
+# Run only if this file is called
+if __name__ == "__main__":
+
+    # invoke main function with parser args
+    main(parser.parse_args())

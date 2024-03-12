@@ -65,7 +65,7 @@
         
 .NOTES
 
-    Version:            1.3
+    Version:            1.4
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -78,6 +78,8 @@
                                             Handling for sold funds as archive information.
     2024-02-20      Stanisław Horna         Refactored investment refund table
     2024-02-21      Stanisław Horna         Adjustments to calling Investment Class contractor and methods.
+    2024-03-12      Stanisław Horna         printQuotationRefundAnalysis method to display analysis,
+                                            based on fund quotation only
 
 """
 
@@ -103,7 +105,8 @@ class InvestmentWallet:
     InvestmentsFilePath: str
     FundsList: ListOfFunds
 
-    TableFormat: str = "simple_grid"
+    TableFormatInvestmentResults: str = "simple_grid"
+    TableFormatRefundAnalysis: str = "github"
 
     # Calculated Variables
     Wallets: dict[str, Investment] = field(default_factory=dict, init=False)
@@ -208,12 +211,43 @@ class InvestmentWallet:
         print("\n")
         print(
             tabulate(
-                tabular_data=dataList[:-1], tablefmt=self.TableFormat, headers=dataHeaders
+                headers=dataHeaders, 
+                tabular_data=dataList[:-1], 
+                tablefmt=self.TableFormatInvestmentResults,
             )
         )
         print("\n")
 
         return None
+
+    def printQuotationRefundAnalysis(self):
+        
+        dataList = []
+        
+        # Loop through investments in wallet
+        for item in self.Wallets.values():
+            
+            # Check if refund analysis is not None
+            # it will be None for each archived investment
+            if (refund:= item.getQuotationRefundAnalysis()) != None:
+                
+                # append dataList with values from analysis (without headers)
+                for fund in refund.values():
+                    dataList.append(fund)
+        
+        # print table in console
+        print("\n")
+        print(
+            tabulate(
+                headers=[row.keys() for row in dataList][0],
+                tabular_data=[row.values() for row in dataList], 
+                tablefmt=self.TableFormatRefundAnalysis,
+            )
+        )
+        print("\n")
+
+        return None
+        
 
     def saveInvestmentHistoryDayByDay(self, destinationPath: str = None):
         # Invoke saving Investment history day by day for each Investment class instance
