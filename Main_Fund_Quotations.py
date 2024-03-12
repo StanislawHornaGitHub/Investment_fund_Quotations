@@ -166,6 +166,8 @@ def main(options):
         )
 
         printInvestmentRefundCalculation(investments, options)
+        
+        printQuotationRefundAnalysis(investments, options)
 
     exit(0)
 
