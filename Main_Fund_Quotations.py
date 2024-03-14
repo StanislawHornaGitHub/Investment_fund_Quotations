@@ -66,16 +66,21 @@
     
     
 .INPUTS
-        --Latest_Fund_Data_Only <- displays todays funds' stats
+        --Latest_Fund_Data_Only <- displays latest funds' stats.
         
         --Print_Investment_Refund_Calculation <- Prints actual results of investments,
-            based on the amount of money invested
+            based on the amount of money invested. Percentage values are sum of all invested money
+            divided by investment value for latest quotation. 
         
         --Quotations_Output_Format {CSV,JSON} <- accepts only CSV or JSON as an input.
             According to provided format Historical quotations will be saved.
             
-        --Print_Refund_Analysis <- Prints refund analysis calculated,
-            based on the payments, timing and invested money
+        --Print_Refund_Analysis <- Prints calculated refund analysis,
+            based on the payments, timing and invested money. Represents the weighted average,
+            where all investment duration is divided in buckets between each buy or sell request,
+            the refund is calculated based on fund price at the start and end of the bucket, 
+            the weight for each result is duration of the bucket and owned participation units.
+            Owned participation units are cumulative sum of all units including those from previous buckets.
 
 .OUTPUTS
     None
@@ -119,19 +124,30 @@ parser.add_argument(
     "-l",
     "--Print_Latest_Fund_Data",
     action="store_true",
-    help="Prints current fund's details.",
+    help="Prints latest funds' stats.",
 )
 parser.add_argument(
     "-i",
     "--Print_Investment_Refund_Calculation",
     action="store_true",
-    help="Prints actual results of investments based on the time and amount of money invested.",
+    help="""
+    Prints actual results of investments,
+    based on the amount of money invested. Percentage values are sum of all invested money
+    divided by investment value for latest quotation.
+    """,
 )
 parser.add_argument(
     "-a",
     "--Print_Refund_Analysis",
     action="store_true",
-    help="Prints refund analysis calculated, based on the payments, timing and invested money.",
+    help="""
+    Prints calculated refund analysis,
+    based on the payments, timing and invested money. Represents the weighted average,
+    where all investment duration is divided in buckets between each buy or sell request,
+    the refund is calculated based on fund price at the start and end of the bucket, 
+    the weight for each result is duration of the bucket and owned participation units.
+    Owned participation units are cumulative sum of all units including those from previous buckets.
+    """,
 )
 parser.add_argument(
     "--Quotations_Output_Format",

@@ -151,7 +151,14 @@ class AnalizyFund:
             # get prices for the beginning and end of the period.
             startPrice = self.getNearestFundPrice(startDate)
             endPrice = self.getNearestFundPrice(endDate)
-
+            
+            # calculate participation units
+            paymentPeriods[i]["ParticipationUnits"] = paymentPeriods[i]["InvestedMoney"] / startPrice
+            
+            # if current iteration is not the first one sum participation units which are already owned
+            if i != 0:
+                paymentPeriods[i]["ParticipationUnits"] += paymentPeriods[i-1]["ParticipationUnits"]
+            
             # calculate the duration for current amount of money
             # -1, because money can produce first profit the day after the buy date
             paymentPeriods[i]["timeFrameInDays"] = (
@@ -160,7 +167,7 @@ class AnalizyFund:
 
             # calculate the refund
             # -1 to get the profit or loss only
-            # * 100 to convert it to the %
+            # multiply by 100 to convert it to the %
             paymentPeriods[i]["refund"] = (
                 (endPrice / startPrice) - 1
             ) * 100
@@ -179,7 +186,7 @@ class AnalizyFund:
             # timeFrame <- the weight of the value
             sum(
                 [
-                    item["timeFrameInDays"] * item["refund"] * item["InvestedMoney"]
+                    item["timeFrameInDays"] * item["refund"] * item["ParticipationUnits"]
                     for item in paymentPeriods
                 ]
             )
@@ -187,7 +194,7 @@ class AnalizyFund:
             # sum of the days taken under the consideration
             sum(
                 [
-                    item["timeFrameInDays"] * item["InvestedMoney"]
+                    item["timeFrameInDays"] * item["ParticipationUnits"]
                     for item in paymentPeriods
                 ]
             )
@@ -199,6 +206,7 @@ class AnalizyFund:
             /
             numOfDays
         )
+        
         # return predefined dict
         return {
             "FundName": self.Name,
