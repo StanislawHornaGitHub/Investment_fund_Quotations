@@ -5,7 +5,8 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
-            "cwd": "/Users/stanislawhorna/VSCode Git/Investment_fund_quotations"
+            "cwd": "/Users/stanislawhorna/VSCode Git/Investment_fund_quotations",
+            "args": ["-l", "-i", "-a"]
         }
     ]
 }

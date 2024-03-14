@@ -31,7 +31,7 @@
 
 .NOTES
 
-    Version:            1.5
+    Version:            1.6
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -50,6 +50,8 @@
                                             at the same time.
     2024-03-08      Stanisław Horna         Multiple payments for same fund at the same date summed up,
                                             instead of taking the last one
+    2024-03-12      Stanisław Horna         getRefundAnalysis returns refund analysis, based on 
+                                            the payments, timing and invested money of each fund in self investment
 
 """
 # Official and 3-rd party imports
@@ -66,6 +68,8 @@ from Dependencies.Function_config import getConfiguration
 # Custom created class modules
 from Dependencies.Class_ListOfFund import ListOfFunds
 from Dependencies.Class_AnalizyFund import AnalizyFund
+
+from tabulate import tabulate
 
 
 @dataclass(kw_only=True)
@@ -98,6 +102,10 @@ class Investment:
         default_factory=float
     )
     Results: dict[str, dict[str, float | str]] = field(
+        init=False,
+        default_factory=dict
+    )
+    QuotationRefunds: dict[str, dict[str, float | str]] = field(
         init=False,
         default_factory=dict
     )
@@ -144,7 +152,6 @@ class Investment:
             self.calcInvestmentDayByDay()
 
         self.calcInvestmentDuration()
-        self.calcRefundDetails()
 
         return None
 
@@ -177,7 +184,101 @@ class Investment:
         # If file does not exist return False as nothing can be done
         return False
 
-    def calcRefundDetails(self) -> None:
+    def calcRefundAnalysis(self) -> None:
+
+        refundPeriods = {}
+
+        # loop through each fund in investments
+        for fund in self.InvestmentDetails:
+            
+            refundPeriods = []
+            
+            # loop through each order for current fund
+            for i in range(0, len(self.InvestmentDetails[fund])):
+                
+                # append list of buckets between fund orders
+                refundPeriods.append(
+                    {
+                        "startDate": parse(self.InvestmentDetails[fund][i]["BuyDate"]).date(),
+                        "endDate": None,
+                        "timeFrameInDays": None,
+                        "ParticipationUnits": None,
+                        "InvestedMoney": self.InvestmentDetails[fund][i]["Money"],
+                        "refund": None
+                    }
+                )
+                
+                # if it is not first iteration add end date for previous bucket
+                if i != 0:
+                    
+                    refundPeriods[i-1]["endDate"] = parse(
+                        self.InvestmentDetails[fund][i]["BuyDate"]
+                    ).date()
+                
+
+            # Add end date for last bucket 
+            refundPeriods[-1]["endDate"] = self.FundsQuotations[fund].getLastQuotationDate()
+
+            # get Refund analysis based on prepared list of buckets
+            self.QuotationRefunds[fund] = (
+                self.FundsQuotations[fund]
+            ).getRefundAnalysis(refundPeriods)
+
+        return None
+    
+    def getRefundAnalysis(self) -> dict[str , dict[str, float]]:
+        
+        try:
+            # invoke analysis calculation
+            self.calcRefundAnalysis()
+        except:
+            return None
+        
+        # return calculated value
+        return self.QuotationRefunds
+
+    def isEndDateSet(self) -> bool:
+        if self.EndDate != Investment.EndDateNotSet:
+            return True
+        return False
+
+    def getProfit(self) -> float:
+        return round(self.Profit, 2)
+
+    def getRefundRate(self) -> float:
+        return round(self.refundRate, 4)
+
+    def getInvestmentDurationDays(self) -> int:
+        return self.InvestmentDetailsDurationDays
+
+    def getNearestFundPrice(self, fundID: str, date: datetime.date, daysLimit: int = 7) -> float:
+        
+        # init local variables to look for fund quotation
+        daysToSubtract = 0
+        newDateToCheck = date
+        price = None
+
+        # Loop until price is None or daysToSubtract is greater than 7
+        # It makes no sense to look further in the past for the quotation of particular fund investment
+        while price == None and daysToSubtract <= daysLimit:
+
+            # calculate new date to check the quotation
+            newDateToCheck -= datetime.timedelta(
+                days=daysToSubtract
+            )
+
+            # get the fund price for new (older) date
+            # if it will be different than None, than while loop will not be continued
+            price = self.FundsQuotations[fundID].getFundPriceOnDate(
+                newDateToCheck.strftime("%Y-%m-%d")
+            )
+
+            # Increment value for next iteration if value will be still None
+            daysToSubtract += 1
+
+        return price
+
+    def initResults(self) -> None:
 
         # Loop through each fund, to calculate latest results
         for fund in self.InvestmentDetails:
@@ -219,21 +320,9 @@ class Investment:
 
         return None
 
-    def isEndDateSet(self) -> bool:
-        if self.EndDate != Investment.EndDateNotSet:
-            return True
-        return False
-
-    def getProfit(self) -> float:
-        return round(self.Profit, 2)
-
-    def getRefundRate(self) -> float:
-        return round(self.refundRate, 4)
-
-    def getInvestmentDurationDays(self) -> int:
-        return self.InvestmentDetailsDurationDays
-
     def getResult(self) -> list[dict[str, float | str]]:
+
+        self.initResults()
 
         # Init local temp variables
         resultList = []
@@ -329,7 +418,7 @@ class Investment:
 
                 # get invested money at this day
                 ordersByDate[currentDate][fund]["Money"] += self.InvestmentDetails[fund][i]["Money"]
-                
+
                 # calculate fund participation units for this day
                 ordersByDate[currentDate][fund]["ParticipationUnits"] += (
                     self.InvestmentDetails[fund][i]["Money"] /
@@ -448,13 +537,20 @@ class Investment:
         # If EndDate is set to static attribute means that it has not been sold,
         # so we have to calculate the duration using current date
         if self.EndDate == Investment.EndDateNotSet:
+            
+            # get oldest last fund quotation date 
+            oldestQuotationDate = sorted([fund.getLastQuotationDate() for fund in self.FundsQuotations.values()])[-1]
+            
+            # calculate the duration in days
             self.InvestmentDetailsDurationDays = (
-                (datetime.datetime.now().date() - self.StartDate).days
+                (oldestQuotationDate - self.StartDate).days
             )
 
         # if End date is set to any other date than we have to use it,
         # as investment has been completed
         else:
+            
+            # calculate the duration in days
             self.InvestmentDetailsDurationDays = (
                 (self.EndDate - self.StartDate).days
             )
@@ -478,9 +574,6 @@ class Investment:
             (currentProcessingDate <= datetime.date.today()) and
             (currentProcessingDate <= self.EndDate)
         ):
-
-            # Init local while loop variable
-            currentValue = 0.0
 
             # Check if on currently processing dates funds were not bought or sold
             if currentProcessingDate in list(fundsOperationsByDate.keys()):
@@ -513,9 +606,11 @@ class Investment:
             if not [tempInvestDetails[fund]["price"]
                     for fund in tempInvestDetails.keys()
                     if tempInvestDetails[fund]["price"] != None]:
+                
                 # Increment calculation date with +1 day
                 currentProcessingDate += datetime.timedelta(days=1)
                 continue
+            
             # If there are no "None" values or results are mixed - some funds have price, some "None",
             # we have data to perform calculation
             else:
@@ -586,8 +681,14 @@ class Investment:
 
             # Init CSV writer and write headers to the file
             writer = csv.writer(investHistory, delimiter='\t')
+            
+            # write headers to file
             writer.writerow(list(self.DayByDay[0].keys()))
+            
+            # loop through each calculated date
             for i in range(0, len(self.DayByDay)):
+                
+                # convert values for current date to list and write them to file
                 writer.writerow(
                     list(
                         self.DayByDay[i].values()

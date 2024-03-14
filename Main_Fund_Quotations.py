@@ -37,6 +37,8 @@
     Investments.json structure:
     {
         "<Name_of_investment_wallet>": {
+            "StartDate": "<yyyy-MM-dd>",
+            "EndDate":  "<yyyy-MM-dd>",
             "<Fund_ID_1>": {
                 "BuyDate": "<Date_when_fund_was_bought>",
                 "Money": <Amount_allocated_for_the_purchase>
@@ -47,6 +49,8 @@
             }
         },
         "<Name_of_investment_wallet>": {
+            "StartDate": "<yyyy-MM-dd>",
+            "EndDate":  "<yyyy-MM-dd>",
             "<Fund_ID_3>": {
                 "BuyDate": "<Date_when_fund_was_bought>",
                 "Money": <Amount_allocated_for_the_purchase>
@@ -66,17 +70,28 @@
     
     
 .INPUTS
-        --Latest_Fund_Data_Only <- displays todays funds' stats
-        --Print_Investment_Refund_Calculation <- prints investment refund for today
+        --Latest_Fund_Data_Only <- displays latest funds' stats.
+        
+        --Print_Investment_Refund_Calculation <- Prints actual results of investments,
+            based on the amount of money invested. Percentage values are sum of all invested money
+            divided by investment value for latest quotation. 
+        
         --Quotations_Output_Format {CSV,JSON} <- accepts only CSV or JSON as an input.
             According to provided format Historical quotations will be saved.
+            
+        --Print_Refund_Analysis <- Prints calculated refund analysis,
+            based on the payments, timing and invested money. Represents the weighted average,
+            where all investment duration is divided in buckets between each buy or sell request,
+            the refund is calculated based on fund price at the start and end of the bucket, 
+            the weight for each result is duration of the bucket and owned participation units.
+            Owned participation units are cumulative sum of all units including those from previous buckets.
 
 .OUTPUTS
     None
 
 .NOTES
 
-    Version:            1.3
+    Version:            1.4
     Author:             Stanisław Horna
     Mail:               stanislawhorna@outlook.com
     GitHub Repository:  https://github.com/StanislawHornaGitHub/Investment_fund_quotations
@@ -93,6 +108,8 @@
                                             Displaying console results in tables
     2024-02-21      Stanisław Horna         Investments which are ended can be pulled from InvestmentDayByDay CSV file.
                                             Dedicated result presenting method for investments consisted of only 1 fund
+    2024-03-12      Stanisław Horna         Analysis based on the payments, timing and invested money implemented
+
 """
 
 import argparse
@@ -103,6 +120,7 @@ from Dependencies.Function_config import *
 programSynopsis = """
 Program to download funds quotations and calculate profits of investments.
 Without params program is creating report about todays funds' stats in JSON
+and calculating investment refund day by day which is saved as CSV file.
 """
 
 parser = argparse.ArgumentParser(description=programSynopsis)
@@ -110,13 +128,30 @@ parser.add_argument(
     "-l",
     "--Print_Latest_Fund_Data",
     action="store_true",
-    help="Prints current fund's details",
+    help="Prints latest funds' stats.",
 )
 parser.add_argument(
     "-i",
     "--Print_Investment_Refund_Calculation",
     action="store_true",
-    help="Prints result of investments refund",
+    help="""
+    Prints actual results of investments,
+    based on the amount of money invested. Percentage values are sum of all invested money
+    divided by investment value for latest quotation.
+    """,
+)
+parser.add_argument(
+    "-a",
+    "--Print_Refund_Analysis",
+    action="store_true",
+    help="""
+    Prints calculated refund analysis,
+    based on the payments, timing and invested money. Represents the weighted average,
+    where all investment duration is divided in buckets between each buy or sell request,
+    the refund is calculated based on fund price at the start and end of the bucket, 
+    the weight for each result is duration of the bucket and owned participation units.
+    Owned participation units are cumulative sum of all units including those from previous buckets.
+    """,
 )
 parser.add_argument(
     "--Quotations_Output_Format",
@@ -142,7 +177,7 @@ def main(options):
     )
 
     if os.path.isfile(config[InvestmentsFilePathKey]):
-        investments = InvestmentWallet(
+        investments: InvestmentWallet = InvestmentWallet(
             InvestmentsFilePath=config[InvestmentsFilePathKey],
             FundsList=Funds
         )
@@ -153,31 +188,67 @@ def main(options):
 
         printInvestmentRefundCalculation(investments, options)
 
+        printRefundAnalysis(investments, options)
+
     exit(0)
 
 
-def setCorrectPath():
+def setCorrectPath() -> None:
+    
     file_path = os.path.realpath(__file__)
     file_path = "/".join(file_path.split("/")[:-1])
     os.chdir(file_path)
 
+    return None
 
-def printLatestFundData(Funds, options):
+
+def printLatestFundData(Funds: ListOfFunds, options: argparse.Namespace) -> None:
+    
+    # Check if appropriate param was used
     if options.Print_Latest_Fund_Data:
+        
         Funds.printFundInfo()
 
+    return None
 
-def saveHistoricalQuotations(Funds: ListOfFunds, destinationDir: str, options):
+
+def saveHistoricalQuotations(Funds: ListOfFunds, destinationDir: str, options: argparse.Namespace) -> None:
+    
+    # Check if appropriate param was used
     if options.Quotations_Output_Format == "JSON":
+        
         Funds.saveQuotationJSON(destinationDir)
 
+    # Check if appropriate param was used
     if options.Quotations_Output_Format == "CSV":
+        
         Funds.saveQuotationCSV(destinationDir)
 
+    return None
 
-def printInvestmentRefundCalculation(investments, options):
+
+def printInvestmentRefundCalculation(investments: InvestmentWallet, options: argparse.Namespace) -> None:
+
+    # Check if appropriate param was used
     if options.Print_Investment_Refund_Calculation:
+
         investments.printInvestmentResults()
 
+    return None
 
-main(parser.parse_args())
+
+def printRefundAnalysis(investments: InvestmentWallet, options: argparse.Namespace) -> None:
+
+    # Check if appropriate param was used
+    if options.Print_Refund_Analysis:
+
+        investments.printRefundAnalysis()
+
+    return None
+
+
+# Run only if this file is called
+if __name__ == "__main__":
+
+    # invoke main function with parser args
+    main(parser.parse_args())
