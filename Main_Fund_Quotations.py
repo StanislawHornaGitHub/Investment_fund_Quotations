@@ -37,6 +37,8 @@
     Investments.json structure:
     {
         "<Name_of_investment_wallet>": {
+            "StartDate": "<yyyy-MM-dd>",
+            "EndDate":  "<yyyy-MM-dd>",
             "<Fund_ID_1>": {
                 "BuyDate": "<Date_when_fund_was_bought>",
                 "Money": <Amount_allocated_for_the_purchase>
@@ -47,6 +49,8 @@
             }
         },
         "<Name_of_investment_wallet>": {
+            "StartDate": "<yyyy-MM-dd>",
+            "EndDate":  "<yyyy-MM-dd>",
             "<Fund_ID_3>": {
                 "BuyDate": "<Date_when_fund_was_bought>",
                 "Money": <Amount_allocated_for_the_purchase>
